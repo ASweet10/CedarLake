@@ -8,7 +8,6 @@ using UnityEngine.UI;
 public class FirstPersonHighlights : MonoBehaviour
 {
     KeyCode interactKey = KeyCode.E;
-    GameEvents gameEvents;
     GameController gameController;
     Interactables interactables;
     Cutscenes cutscenes;
@@ -28,14 +27,13 @@ public class FirstPersonHighlights : MonoBehaviour
     [Header("Interact Texts")]
     [SerializeField] string trashString = "It smells awful...";
     [SerializeField] string myCarString = "My car. An old piece of shit but it's reliable";
-    [SerializeField] string tiresSlashedString = "Someone totaled my car! What the Hell am I gonna do?";
-    [SerializeField] string davidCarString = "David's new wheels. I'm sure he'll brag about it";
+    [SerializeField] string tiresSlashedString = "Someone totaled my car! What am I gonna do?";
+    [SerializeField] string davidCarString = "David's new wheels. He can't stop bragging about it";
     [SerializeField] string needsZippoAndLighterFluidString = "I'm gonna need lighter fluid and a lighter";
     [SerializeField] string needsZippoString = "I still need a source of fire...";
     [SerializeField] string needsLighterFluidString = "I still need lighter fluid...";    
     
     void Awake() {
-        gameEvents = GameObject.FindGameObjectWithTag("GameController").GetComponent<GameEvents>(); 
         gameController = GameObject.FindGameObjectWithTag("GameController").GetComponent<GameController>(); 
         interactables = GameObject.FindGameObjectWithTag("GameController").GetComponent<Interactables>();
         cutscenes = GameObject.FindGameObjectWithTag("GameController").GetComponent<Cutscenes>();
@@ -78,7 +76,7 @@ public class FirstPersonHighlights : MonoBehaviour
                 switch(gameController.currentObjective) {
                     case 2:
                         // If checkpoint is "drive to park" after buying gas
-                        gameEvents.StartDriveToParkCutscene();
+                        gameController.StartDriveToParkCutscene();
                         break;
                     case 5:
                         // If player introduced to danger and allowed to leave (ending 1)
@@ -102,15 +100,15 @@ public class FirstPersonHighlights : MonoBehaviour
                 fpController.DisablePlayerMovement(true, false);
                 break;
             case "Firewood":
-                gameEvents.HandleCollectKeyItem("Firewood");
+                gameController.HandleCollectKeyItem("Firewood");
                 hitObj.SetActive(false);
                 break;
             case "Zippy":
-                gameEvents.HandleCollectKeyItem("Zippy");
+                gameController.HandleCollectKeyItem("Zippy");
                 hitObj.SetActive(false);
                 break;
             case "Lighter Fluid":
-                gameEvents.HandleCollectKeyItem("LighterFluid");
+                gameController.HandleCollectKeyItem("LighterFluid");
                 hitObj.SetActive(false);
                 break;
             case "Start Fire":
@@ -123,11 +121,13 @@ public class FirstPersonHighlights : MonoBehaviour
                 } else if (!gameController.hasZippo) {
                     StartCoroutine(gameController.DisplayPopupMessage(needsZippoString));
                 } else {
-                    StartCoroutine(gameEvents.StartCampFire());
+                    StartCoroutine(gameController.StartCampFire());
                 }
                 break;
             case "Build Campfire":
-                gameEvents.HandleBuildFire();
+                if(gameController.currentObjective == 5) {
+                    gameController.HandleBuildFire();
+                }
                 break;
             case "Head To Park":
                 StartCoroutine(cutscenes.HandleDriveToParkCutscene());
@@ -135,7 +135,7 @@ public class FirstPersonHighlights : MonoBehaviour
             case "HiddenItem":
                 break;
             case "Car Keys":
-                gameEvents.HandleCollectKeyItem("CarKeys");
+                gameController.HandleCollectKeyItem("CarKeys");
                 hitObj.SetActive(false);
                 break;
             case "Cashier":

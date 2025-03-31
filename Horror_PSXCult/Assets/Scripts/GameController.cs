@@ -3,6 +3,8 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using TMPro;
 using System.Collections.Generic;
+using UnityEngine.Rendering; 
+using UnityEngine.Rendering.Universal;
 
 public class GameController : MonoBehaviour
 {
@@ -19,13 +21,13 @@ public class GameController : MonoBehaviour
     [SerializeField] TMP_Text objectiveTextInPauseMenu;
     [SerializeField] FirstPersonController fpController;
     [SerializeField] string[] gameObjectives;
+    public int currentObjective = 4;
 
 
     public bool holdingGasStationItem = false;
     public bool hasPurchasedGas = false;
     public bool playerHasReadCarNote = false;
     public bool playerNeedsFirewood = true;
-    public bool tentCompleted = false;
     public bool hasZippo = false;
     public bool hasLighterFluid = false;
     public bool hasCarKeys = false;
@@ -48,12 +50,15 @@ public class GameController : MonoBehaviour
     [SerializeField] GameObject deathUI;
     [SerializeField] Transform[] restartPositions;
     [SerializeField] GameObject[] killers;
+    int currentCheckpoint = 0;
+
 
 
     [Header ("Main Menu")]
     [SerializeField] GameObject mainMenuUI;
     [SerializeField] GameObject optionsMenuUI;
     [SerializeField] GameObject[] expositionUIObjects;
+
 
     
     [Header ("Endings")]
@@ -64,12 +69,53 @@ public class GameController : MonoBehaviour
         "You managed to escape and immediately alerted the authorities. You tell them that, unfortunately, you weren't able to save your friends.",
         "Most people would focus on saving their own skin and you went back. You are truly a good friend."
     };
-    int currentCheckpoint = 0;
-    public int currentObjective = 4;
 
+    [Header ("Events")]
+    FirstPersonHighlights fpHighlights;
+    [SerializeField] AudioSource itemPickupAudio;
+    [SerializeField] GameObject hunter;
+    [SerializeField] GameObject zippo;
+    [SerializeField] GameObject lighterFluid;
+
+
+
+    [Header ("Campfire")]
+    [SerializeField] GameObject[] firewood;
+    int firewoodCollected;
+    int firewoodMax = 2;  //  change to 6 for game, 2 for testing
+    [SerializeField] GameObject fireSmall;
+    [SerializeField] GameObject fireMediumSmoke;
+    [SerializeField] GameObject fireBigSmoke;
+    [SerializeField] GameObject campfire;
+    [SerializeField] GameObject campfireCollider;
+    [SerializeField] GameObject campfireTransparent;
+    [SerializeField] Transform campfirePosition;
+    float smallFireTime = 5f;
+    float mediumFireTime = 10f;
+
+    
+    [Header("Day/Night")]
+    [SerializeField] Material nightSkyboxMat;
+    [SerializeField] GameObject directionalLightDay;
+    [SerializeField] GameObject directionalLightNight;
+    [SerializeField] GameObject davidRef;
+    [SerializeField] GameObject[] tents;
+    Volume volume;
+    ColorAdjustments colorAdjustments;
+    Bloom bloom;
+    
+
+    
     void Start() {
+        fpHighlights = GameObject.FindGameObjectWithTag("Player").GetComponent<FirstPersonHighlights>();
+        volume = gameObject.GetComponent<Volume>();
+        volume.profile.TryGet(out colorAdjustments);
+        volume.profile.TryGet(out bloom);
+
         //currentObjective = 0;
         //currentCheckpoint = 0;
+        firewoodCollected = 0;
+
         if(SceneManager.GetActiveScene().buildIndex != 1) {  // If main menu / ending
             Cursor.lockState = CursorLockMode.None;
             //Cursor.SetCursor(arrowCursor, Vector2.zero, CursorMode.Auto);
@@ -81,7 +127,9 @@ public class GameController : MonoBehaviour
     }
 
     void Update() {
-        //Debug.Log("FPS: " + Application.targetFrameRate);
+        if(Input.GetKeyDown(KeyCode.Alpha3)) {
+            TransitionToNighttime();
+        }
     }
 
     public void ReplayFromDeath() {
@@ -172,5 +220,122 @@ public class GameController : MonoBehaviour
     public void SetEndingMessage(int endingNumber) {
         endingHeader.text = "Ending " + (endingNumber + 1) + " of 3";
         endingMessage.text = endingMessages[endingNumber];
+    }
+
+
+
+    /* Events */
+    public void HandleBuildFire() {
+        campfireTransparent.SetActive(false);
+        campfire.SetActive(true);
+        campfire.tag = "Start Fire";
+
+        zippo.tag = "Zippo";
+        zippo.GetComponent<BoxCollider>().enabled = true;
+        lighterFluid.tag = "Lighter Fluid";
+        lighterFluid.GetComponent<BoxCollider>().enabled = true;
+
+        StartCoroutine(HandleNextObjective());
+    }
+
+    public void HandleCollectKeyItem(string item) {
+        switch(item) {
+            case "Zippy":
+                hasZippo = true;
+                interactables.TogglePauseMenuObject("zippo", true);
+                if(hasLighterFluid) {
+                    StartCoroutine(HandleNextObjective());
+                }
+                break;
+            case "LighterFluid":
+                hasLighterFluid = true;
+                interactables.TogglePauseMenuObject("lighterFluid", true);
+                if(hasZippo) {
+                    StartCoroutine(HandleNextObjective());
+                }
+                break;
+            case "CarKeys":
+                hasCarKeys = true;
+                interactables.TogglePauseMenuObject("keys", true);
+                StartCoroutine(HandleNextObjective());
+
+                // Change player car tag? Can now leave?
+
+                break;
+            case "Firewood":
+                firewoodCollected ++;
+
+                if(firewoodCollected < firewoodMax) {
+                    StartCoroutine(DisplayPopupMessage("Collect firewood (" + firewoodCollected + " of " + firewoodMax + ")"));
+                } else {
+                    StartCoroutine(DisplayPopupMessage("Time to build a fire"));
+                    playerNeedsFirewood = false;
+                    StartCoroutine(HandleNextObjective());
+
+                    campfireTransparent.SetActive(true); // Enable transparent campfire for interaction
+
+                    foreach(GameObject wood in firewood) {
+                        wood.tag = "Untagged";
+                        var woodCollider = wood.GetComponent<BoxCollider>();
+                        woodCollider.enabled = false;
+                    }
+                    foreach(GameObject tent in tents) {
+                        tent.SetActive(true);
+                    }
+                }
+
+                break;
+            }
+
+        itemPickupAudio.Play();
+    }
+
+        public IEnumerator StartCampFire() {
+        fpHighlights.ClearHighlighted();
+
+        campfire.tag = "Untagged";
+        campfireCollider.tag = "Untagged";
+
+        interactables.TogglePauseMenuObject("zippo", false);
+        interactables.TogglePauseMenuObject("lighterFluid", false);
+
+        // Animation of lighter fluid pouring onto fire
+        // Animation of zippo starting fire? 
+        //   or match thrown onto fire? (change from zippo -> match?)
+        var smallFire = Instantiate(fireSmall, campfirePosition.position, Quaternion.identity);
+        yield return new WaitForSecondsRealtime(smallFireTime);
+        Destroy(smallFire);
+        var mediumFire = Instantiate(fireMediumSmoke, campfirePosition.position, Quaternion.identity);
+        yield return new WaitForSecondsRealtime(mediumFireTime);
+        Destroy(mediumFire);
+        Instantiate(fireBigSmoke, campfirePosition.position, Quaternion.identity);
+        fireStarted = true;
+
+        StartCoroutine(HandleNextObjective());
+        
+        hunter.SetActive(true);
+    }
+
+    public void TransitionToNighttime() {
+        RenderSettings.skybox = nightSkyboxMat;
+        directionalLightDay.SetActive(false);
+        directionalLightNight.SetActive(true);
+
+        colorAdjustments.hueShift.value = 2f;
+        /* Disable david's tent flap, not the other one
+         player has to open theirs with e, tent sound & fade out/in
+
+        foreach(GameObject tentFlap in tentFlaps) {
+            tentFlap.SetActive(false);
+        }
+        */
+
+        //davidRef.tag = "Untagged"; // Set tag to null; disable dialog
+        //var davidCharacter = davidRef.GetComponent<CharacterAI>();
+        //davidCharacter.StateRef = CharacterAI.State.dead;
+    }
+
+    public void StartDriveToParkCutscene() {
+
     }
 }

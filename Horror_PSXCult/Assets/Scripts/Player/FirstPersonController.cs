@@ -1,9 +1,8 @@
 using System.Collections;
-using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
 using UnityEngine;
 using UnityEngine.UI;
-using UnityEngine.Rendering.PostProcessing;
+using UnityEngine.Rendering.Universal;
+using UnityEngine.Rendering;
 
 public class FirstPersonController : MonoBehaviour
 {
@@ -57,7 +56,7 @@ public class FirstPersonController : MonoBehaviour
     [SerializeField] AudioSource damageAudio;
     [SerializeField] GameObject bleedingUI;
     [SerializeField] RawImage bloodParticles;
-    [SerializeField] PostProcessVolume volume;
+    Volume volume;
     Vignette vignette = null;
     float lastDamageTime;
     float maxHealth = 10;
@@ -115,7 +114,8 @@ public class FirstPersonController : MonoBehaviour
         defaultYPosition = mainCamera.transform.localPosition.y; // Return camera to default position when not moving
         tf = gameObject.GetComponent<Transform>();
 
-        volume.profile.TryGetSettings(out vignette);
+        volume = GameObject.FindGameObjectWithTag("GameController").GetComponent<Volume>();
+        //volume.profile.TryGetSettings(out vignette);
     }
 
     void Start() {
@@ -157,7 +157,7 @@ public class FirstPersonController : MonoBehaviour
 
         switch(currentHealth) {
             case float currentHealth when currentHealth > 6 && currentHealth < 10:
-                vignette.enabled.Override(true);
+                //vignette.enabled.Override(true);
                 //vignette.intensity.value = 0.4f;
                 vignette.intensity.Override(0.6f);
                 /*
@@ -168,7 +168,7 @@ public class FirstPersonController : MonoBehaviour
                 */
                 break;
             case float currentHealth when currentHealth > 3 && currentHealth < 6:
-                vignette.enabled.Override(true);
+                //vignette.enabled.Override(true);
                 vignette.intensity.Override(0.6f);
                 /*
                 float alpha1 = 1f;
@@ -179,7 +179,7 @@ public class FirstPersonController : MonoBehaviour
                 // heavy breathing audio? 
                 break;
             case float currentHealth when currentHealth <= 0:
-                vignette.enabled.Override(false);
+                //vignette.enabled.Override(false);
                 StopCoroutine(HandleRegenerateHealth());
                 StartCoroutine(gameController.HandlePlayerDeath());
                 break;
