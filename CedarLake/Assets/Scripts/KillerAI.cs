@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.AI;
 
 public class KillerAI : MonoBehaviour
 {
@@ -9,6 +10,7 @@ public class KillerAI : MonoBehaviour
     Transform tf;
     FieldOfView fovScript;
     CharacterController controller;
+    NavMeshAgent agent;
     
     
     [Header("Footsteps")]
@@ -34,8 +36,6 @@ public class KillerAI : MonoBehaviour
     [SerializeField] float attackRange = 3f;
     [SerializeField] float chaseRange = 15f;
     //[SerializeField] float hearingRange = 15f;
-    bool canAttack = true;
-    bool attacking = false;
 
     
     // use to determine point last saw player
@@ -47,6 +47,7 @@ public class KillerAI : MonoBehaviour
     public State state = State.patrolling;
 
     void Start () {
+        agent = gameObject.GetComponent<NavMeshAgent>();
         playerTF = GameObject.FindGameObjectWithTag("Player").GetComponent<Transform>();
         fovScript = gameObject.GetComponent<FieldOfView>();
         anim = gameObject.GetComponent<Animator>();
@@ -119,7 +120,8 @@ public class KillerAI : MonoBehaviour
 
             Vector3 waypointPos = waypoints[currentWaypoint].position - tf.position;
             waypointPos = waypointPos.normalized * walkSpeed;
-
+            
+            /*
             if(!controller.isGrounded){
                 waypointPos.y -= 9.8f * Time.deltaTime; // Apply gravity
                 if(controller.velocity.y < -1 && controller.isGrounded){  //Landing frame; reset y value to 0
@@ -127,43 +129,52 @@ public class KillerAI : MonoBehaviour
                 }
             }
             controller.Move(waypointPos * Time.deltaTime);
-
+            */
+            agent.speed = 5f;
+            agent.SetDestination(waypoints[currentWaypoint].position);
             HandleKillerWalkSFX();
         } else {
-            currentWaypoint ++;
+            if(currentWaypoint == waypoints.Length - 1) {
+                currentWaypoint = 0;
+            } else {
+                currentWaypoint ++;
+            }
             state = State.lookAroundAtWaypoint;
         }
     }
     
     void HandleChaseTarget() {
         if(Vector3.Distance(tf.position, playerTF.position) <= chaseRange) {
-            tf.LookAt(playerTF);
-            tf.localEulerAngles = new Vector3(0f, tf.localEulerAngles.y, tf.localEulerAngles.z);
+            //tf.LookAt(playerTF);
+            //tf.localEulerAngles = new Vector3(0f, tf.localEulerAngles.y, tf.localEulerAngles.z);
 
             anim.SetBool("idle", false);
             anim.SetBool("walking", false);
             anim.SetBool("attacking", false);
             anim.SetBool("chasing", true);
 
+            /*
             Vector3 currentMovement = playerTF.position - tf.position;
             currentMovement = currentMovement.normalized * sprintSpeed;
-   
             if(!controller.isGrounded) {
                 currentMovement.y -= 9.8f; // Apply gravity
                 if(controller.velocity.y < -1 && controller.isGrounded){  //Landing frame; reset y value to 0
                     currentMovement.y = 0;
                 }
             }
-            /*
-            if(!attacking) {
-                controller.Move(currentMovement * Time.deltaTime);
-            }
             */
-            controller.Move(currentMovement * Time.deltaTime);
+            //controller.Move(currentMovement * Time.deltaTime);
+            agent.speed = 10f;
+            agent.SetDestination(playerTF.position);
 
             if(Vector3.Distance(tf.position, playerTF.position) <= attackRange) {
                 state = State.attacking;
             }
+
+            if(!fovScript.canSeePlayer) {
+                state = State.lookAroundAtWaypoint;
+            }
+
         } else {
             state = State.patrolling;
         }
@@ -216,13 +227,14 @@ public class KillerAI : MonoBehaviour
             state = State.chasingPlayer;
         }
         anim.SetBool("walking", false);
-        anim.SetBool("Chasing", false);
-        anim.SetBool("lookingAtWaypoint", true);
+        anim.SetBool("chasing", false);
+        anim.SetBool("idle", true);
+        //anim.SetBool("lookingAtWaypoint", true);
 
         StartCoroutine(ResumePatrollingAfterDelay());
     }
     IEnumerator ResumePatrollingAfterDelay() {
-        yield return new WaitForSeconds(5f);
+        yield return new WaitForSeconds(3f);
         state = State.patrolling;
     }
 }

@@ -1,13 +1,12 @@
 using UnityEngine;
 using TMPro;
-using System.Collections;
 using UnityEditor;
 
-public class GameOptions : MonoBehaviour
+public class Options : MonoBehaviour
 {
     [SerializeField] TMP_Dropdown dropdown;
     string chosenWindow;
-    public void GetWindowDropdownValue(){
+    public void GetWindowDropdownValue() {
         int windowIndex = dropdown.value;
         chosenWindow = dropdown.options[windowIndex].text;
         SetWindowType(chosenWindow);

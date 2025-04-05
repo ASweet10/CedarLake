@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.AI;
 
 public class CharacterAI : MonoBehaviour
 {
@@ -10,11 +11,10 @@ public class CharacterAI : MonoBehaviour
     [SerializeField] Transform[] waypoints;
     [SerializeField] float turnSpeed = 60f;
     [SerializeField, Range(1, 5)] float walkSpeed = 2f;
+    NavMeshAgent agent;
 
     Transform tf;
     AudioSource footstepAudioSource;
-    bool atWaypoint = false;
-    bool characterMoving = false;
     int currentWP = 0;
     public enum State{ idle, walkingToWaypoint, talking, hiding, followingPlayer, dead };
     State state = State.idle;
@@ -23,40 +23,17 @@ public class CharacterAI : MonoBehaviour
         set { state = value; }
     }
 
-    enum CharacterType{ Friend, Hunter, Killer };
-    [SerializeField] CharacterType characterType = CharacterType.Hunter;
-
     void Start () {
+        agent = gameObject.GetComponent<NavMeshAgent>();
         anim = gameObject.GetComponent<Animator>();
         tf = gameObject.GetComponent<Transform>();
-        state = State.idle;
+        state = State.followingPlayer;
     }
 
     void Update() {
         HandleAIBehavior();
     }
-    void FixedUpdate() {
-        /*
-        if(characterType != CharacterType.Cashier) {
-            if(characterMoving) {
-                Vector3 direction = waypoints[currentWP].position - tf.position;
-                direction.y = 0;
-                Quaternion rotation = Quaternion.LookRotation(direction);
-                tf.rotation = Quaternion.Slerp(tf.rotation, rotation, Time.deltaTime * turnSpeed);
-                tf.position += transform.forward * Time.deltaTime * walkSpeed;
 
-                if(!footstepAudioSource.isPlaying) {
-                    footstepAudioSource.Play();
-                }
-            } else {
-                if(footstepAudioSource.isPlaying) {
-                    footstepAudioSource.Stop();
-                }
-            }
-        }
-        */
-
-    }
     void HandleAIBehavior() {
         switch (state) {
             case State.idle:
@@ -81,17 +58,64 @@ public class CharacterAI : MonoBehaviour
     }
 
     void HandleWaypointNavigation() {
-        if (currentWP != waypoints.Length) {
-            if (!atWaypoint) {
-                if(!CanRotateTowardsWaypoint(waypoints[currentWP])) {
-                    GoToNextWaypoint(waypoints[currentWP]);
-                }
+        if (currentWP != waypoints.Length - 1) {
+            if (Vector3.Distance(transform.position, waypoints[currentWP].position) > 1f) {
+                anim.SetBool("walking", true);
+                agent.SetDestination(waypoints[currentWP].position);
+                
+            } else {
+                currentWP++;
             }
         } else {
+            anim.SetBool("walking", false);
             state = State.idle;
         }
     }
     
+    public void RotateAndStartTalking() {
+        Vector3 targetPosition = playerTF.position - tf.position;
+        Quaternion rotation = Quaternion.LookRotation(targetPosition);
+        tf.rotation = Quaternion.Slerp(tf.rotation, rotation, Time.deltaTime * turnSpeed);
+        tf.localEulerAngles = new Vector3(0f, tf.localEulerAngles.y, 0);
+
+        state = State.talking;
+    }
+
+    void HandleIdle() {
+        anim.SetBool("idle", true);
+        agent.isStopped = true;
+
+        //if character injured check...
+        if (Vector3.Distance(transform.position, playerTF.position) > 3f) {
+            anim.SetBool("idle", false);
+            agent.isStopped = false;
+            state = State.followingPlayer;
+        }
+    }
+    void HandleTalking() {
+        anim.SetBool("talking", true);
+    }
+    void HandleHideBehavior() {
+        // find nearest bush you can hide in
+        // If killer not within range, hide there
+        // If killer within range, run away
+    }
+    void HandleFollowPlayer() {
+        if (Vector3.Distance(transform.position, playerTF.position) > 5f) {
+            anim.SetBool("injured", true);
+            agent.SetDestination(playerTF.position);
+        } else {
+            anim.SetBool("injured", false);
+            state = State.idle;
+        }
+    }
+    void HandleDeath() {
+        anim.SetTrigger("death");
+    }
+
+
+
+    /*
     void GoToNextWaypoint(Transform wp) {
         atWaypoint = false;
         anim.SetBool("isIdle", false);
@@ -101,15 +125,13 @@ public class CharacterAI : MonoBehaviour
             atWaypoint = true;
             currentWP ++;
             if(currentWP >= waypoints.Length) {
-                characterMoving = false;
                 state = State.idle;
             } else {
                 GoToNextWaypoint(waypoints[currentWP]);
             }
-        } else {
-            characterMoving = true;
         }
     }
+
 
     public bool CanRotateTowardsWaypoint(Transform wp) {
         Vector3 nextWPVector = wp.position - tf.position;
@@ -126,40 +148,5 @@ public class CharacterAI : MonoBehaviour
             return false;
         }
     }
-
-    public void RotateAndStartTalking() {
-        Vector3 targetPosition = playerTF.position - tf.position;
-        Quaternion rotation = Quaternion.LookRotation(targetPosition);
-        tf.rotation = Quaternion.Slerp(tf.rotation, rotation, Time.deltaTime * turnSpeed);
-        tf.localEulerAngles = new Vector3(0f, tf.localEulerAngles.y, 0);
-
-        state = State.talking;
-    }
-
-    void HandleIdle() {
-        characterMoving = false;
-        anim.SetBool("isWalking", false);
-        anim.SetBool("isTalking", false);
-        anim.SetBool("isIdle", true);
-    }
-    void HandleTalking() {
-        characterMoving = false;
-        anim.SetBool("isWalking", false);
-        anim.SetBool("isIdle", false);
-        anim.SetBool("isTalking", true);
-    }
-    void HandleHideBehavior() {
-        // find nearest bush you can hide in
-        // If killer not within range, hide there
-        // If killer within range, run away
-    }
-    void HandleFollowPlayer() {
-
-    }
-    void HandleDeath() {
-        anim.SetBool("isWalking", false);
-        anim.SetBool("isIdle", false);
-        anim.SetBool("isTalking", false);
-        anim.SetTrigger("death");
-    }
+    */
 }
