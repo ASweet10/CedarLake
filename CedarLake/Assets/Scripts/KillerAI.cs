@@ -37,11 +37,7 @@ public class KillerAI : MonoBehaviour
     [SerializeField] float chaseRange = 15f;
     //[SerializeField] float hearingRange = 15f;
 
-    
-    // use to determine point last saw player
-    // player goes around corner, last saw them at this corner, investigate area around last seen place if lost sight
-    // killer loses sight of player due to bush / trees / etc., killer checks last seen area
-    Transform playerLastSeenPosition;
+    Transform playerLastSeenPosition; // Where did I last see player?; Lost LOS due to trees etc.; Investigate area
 
     public enum State{ idle, patrolling, lookAroundAtWaypoint, chasingPlayer, attacking, searchingBushes, investigatingSound };
     public State state = State.patrolling;
@@ -113,9 +109,6 @@ public class KillerAI : MonoBehaviour
         }
 
         if (Vector3.Distance(tf.position, waypoints[currentWaypoint].position) > 1f) {
-            anim.SetBool("idle", false);
-            anim.SetBool("chasing", false);
-            anim.SetBool("attacking", false);
             anim.SetBool("walking", true);
 
             Vector3 waypointPos = waypoints[currentWaypoint].position - tf.position;
@@ -139,6 +132,7 @@ public class KillerAI : MonoBehaviour
             } else {
                 currentWaypoint ++;
             }
+            anim.SetBool("walking", false);
             state = State.lookAroundAtWaypoint;
         }
     }
@@ -147,10 +141,6 @@ public class KillerAI : MonoBehaviour
         if(Vector3.Distance(tf.position, playerTF.position) <= chaseRange) {
             //tf.LookAt(playerTF);
             //tf.localEulerAngles = new Vector3(0f, tf.localEulerAngles.y, tf.localEulerAngles.z);
-
-            anim.SetBool("idle", false);
-            anim.SetBool("walking", false);
-            anim.SetBool("attacking", false);
             anim.SetBool("chasing", true);
 
             /*
@@ -164,18 +154,16 @@ public class KillerAI : MonoBehaviour
             }
             */
             //controller.Move(currentMovement * Time.deltaTime);
-            agent.speed = 10f;
+            agent.speed = 13f;
             agent.SetDestination(playerTF.position);
 
             if(Vector3.Distance(tf.position, playerTF.position) <= attackRange) {
+                anim.SetBool("chasing", false);
                 state = State.attacking;
             }
 
-            if(!fovScript.canSeePlayer) {
-                state = State.lookAroundAtWaypoint;
-            }
-
         } else {
+            anim.SetBool("chasing", false);
             state = State.patrolling;
         }
     }
@@ -184,10 +172,10 @@ public class KillerAI : MonoBehaviour
         if(Vector3.Distance(tf.position, playerTF.position) <= attackRange) {
             tf.LookAt(playerTF);
             tf.localEulerAngles = new Vector3(0f, tf.localEulerAngles.y, tf.localEulerAngles.z);
-
-            anim.SetBool("chasing", false);
             anim.SetBool("attacking", true);
+
         } else {
+            anim.SetBool("attacking", false);
             state = State.chasingPlayer;
         }
     }
@@ -224,17 +212,16 @@ public class KillerAI : MonoBehaviour
     }
     void HandleLookAroundAtWaypoint() {
         if(fovScript.canSeePlayer) {
+            anim.SetBool("idle", false);
             state = State.chasingPlayer;
         }
-        anim.SetBool("walking", false);
-        anim.SetBool("chasing", false);
         anim.SetBool("idle", true);
-        //anim.SetBool("lookingAtWaypoint", true);
 
         StartCoroutine(ResumePatrollingAfterDelay());
     }
     IEnumerator ResumePatrollingAfterDelay() {
-        yield return new WaitForSeconds(3f);
+        yield return new WaitForSeconds(4f);
+        anim.SetBool("idle", false);
         state = State.patrolling;
     }
 }

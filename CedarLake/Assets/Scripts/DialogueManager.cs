@@ -56,7 +56,7 @@ public class DialogueManager : MonoBehaviour
 
         switch(speakerName) {
             case "Cashier":
-                if(gameController.playerCaughtStealing) {
+                if(gameController.caughtStealing) {
                     currentDialogueIndex = 9; // Steal options
                 } else if(gameController.hasPurchasedGas) {
                     currentDialogueIndex = 10; // No item in hand
@@ -197,6 +197,6 @@ public class DialogueManager : MonoBehaviour
         gameController.hunterWarningComplete = true;
     }
     public void DisableCaughtStealingStatus(){
-        gameController.playerCaughtStealing = false;
+        gameController.caughtStealing = false;
     }
 }

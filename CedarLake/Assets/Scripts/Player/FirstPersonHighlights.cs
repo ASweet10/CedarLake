@@ -58,7 +58,7 @@ public class FirstPersonHighlights : MonoBehaviour
                 break;
             case "Car Note":
                 interactables.ToggleMissingUI(hitObj.gameObject.name, true);
-                gameController.playerHasReadCarNote = true;
+                gameController.hasReadCarNote = true;
                 gameController.HandleNextObjective();
                 fpController.DisablePlayerMovement(true, false);
                 break;
@@ -125,9 +125,15 @@ public class FirstPersonHighlights : MonoBehaviour
                 }
                 break;
             case "Build Campfire":
-                if(gameController.currentObjective == 5) {
+                if(gameController.hasFirewood) {
                     gameController.HandleBuildFire();
                 }
+                break;
+            case "Go To Sleep":
+                StartCoroutine(gameController.TransitionToNighttime());
+                break;
+            case "Leave Tent":
+                gameController.HandleLeaveTent();
                 break;
             case "Head To Park":
                 StartCoroutine(cutscenes.HandleDriveToParkCutscene());

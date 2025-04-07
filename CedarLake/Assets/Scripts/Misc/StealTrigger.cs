@@ -12,7 +12,7 @@ public class StealTrigger : MonoBehaviour
     void OnTriggerEnter(Collider other) {
         if(other.gameObject.tag == "Player"){
             if(gameController.holdingGasStationItem) {
-                gameController.playerCaughtStealing = true;
+                gameController.caughtStealing = true;
                 var playerController = other.GetComponent<FirstPersonController>();
                 playerController.RotateTowardsSpeaker(cashier);
                 pickUpObjects.DropObject();
@@ -28,7 +28,7 @@ public class StealTrigger : MonoBehaviour
     void OnTriggerStay(Collider other) {
         if(other.gameObject.tag == "Player"){
             if(gameController.holdingGasStationItem) {
-                gameController.playerCaughtStealing = true;
+                gameController.caughtStealing = true;
                 var playerController = other.GetComponent<FirstPersonController>();
                 playerController.RotateTowardsSpeaker(cashier);
                 pickUpObjects.DropObject();
@@ -44,7 +44,7 @@ public class StealTrigger : MonoBehaviour
 
     void OnTriggerExit(Collider other) {
         if(other.gameObject.tag == "Player"){
-            gameController.playerCaughtStealing = false;
+            gameController.caughtStealing = false;
             pickUpObjects.canDrop = true;
         } 
     }

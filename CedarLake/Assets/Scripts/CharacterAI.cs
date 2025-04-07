@@ -22,12 +22,18 @@ public class CharacterAI : MonoBehaviour
         get { return state; }
         set { state = value; }
     }
+    public bool injured;
 
     void Start () {
         agent = gameObject.GetComponent<NavMeshAgent>();
         anim = gameObject.GetComponent<Animator>();
         tf = gameObject.GetComponent<Transform>();
-        state = State.followingPlayer;
+        if(gameObject.tag == "Cashier") {
+            state = State.idle;
+        } else {
+            state = State.walkingToWaypoint;
+        }
+        injured = false;
     }
 
     void Update() {
@@ -58,13 +64,15 @@ public class CharacterAI : MonoBehaviour
     }
 
     void HandleWaypointNavigation() {
-        if (currentWP != waypoints.Length - 1) {
+        if (currentWP != waypoints.Length) {
             if (Vector3.Distance(transform.position, waypoints[currentWP].position) > 1f) {
+                anim.SetBool("idle", false);
                 anim.SetBool("walking", true);
                 agent.SetDestination(waypoints[currentWP].position);
                 
             } else {
                 currentWP++;
+                Debug.Log("currentwp" + currentWP);
             }
         } else {
             anim.SetBool("walking", false);
@@ -85,12 +93,14 @@ public class CharacterAI : MonoBehaviour
         anim.SetBool("idle", true);
         agent.isStopped = true;
 
-        //if character injured check...
-        if (Vector3.Distance(transform.position, playerTF.position) > 3f) {
-            anim.SetBool("idle", false);
-            agent.isStopped = false;
-            state = State.followingPlayer;
+        if(injured) {
+            if (Vector3.Distance(transform.position, playerTF.position) > 3f) {
+                anim.SetBool("idle", false);
+                agent.isStopped = false;
+                state = State.followingPlayer;
+            }
         }
+
     }
     void HandleTalking() {
         anim.SetBool("talking", true);

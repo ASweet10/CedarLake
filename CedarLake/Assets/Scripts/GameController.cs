@@ -26,15 +26,15 @@ public class GameController : MonoBehaviour
 
     public bool holdingGasStationItem = false;
     public bool hasPurchasedGas = false;
-    public bool playerHasReadCarNote = false;
-    public bool playerNeedsFirewood = true;
+    public bool hasReadCarNote = false;
     public bool hasZippo = false;
     public bool hasLighterFluid = false;
     public bool hasCarKeys = false;
     public bool fireStarted = false;
-    public bool playerCaughtStealing = false;
+    public bool caughtStealing = false;
     public bool hunterWarningComplete = false;
     public bool gamePaused = false;
+    public bool hasFirewood = false;
 
     public bool hasDrink = false;
     public int chosenDrinkIndex = 0;
@@ -81,8 +81,7 @@ public class GameController : MonoBehaviour
 
     [Header ("Campfire")]
     [SerializeField] GameObject[] firewood;
-    int firewoodCollected;
-    int firewoodMax = 2;  //  change to 6 for game, 2 for testing
+    [SerializeField] GameObject woodBundle;
     [SerializeField] GameObject fireSmall;
     [SerializeField] GameObject fireMediumSmoke;
     [SerializeField] GameObject fireBigSmoke;
@@ -99,7 +98,9 @@ public class GameController : MonoBehaviour
     [SerializeField] GameObject directionalLightDay;
     [SerializeField] GameObject directionalLightNight;
     [SerializeField] GameObject davidRef;
-    [SerializeField] GameObject[] tents;
+    [SerializeField] GameObject deadBody;
+    [SerializeField] GameObject[] tentObjects;
+    [SerializeField] GameObject playerTent;
     Volume volume;
     ColorAdjustments colorAdjustments;
     Bloom bloom;
@@ -112,9 +113,8 @@ public class GameController : MonoBehaviour
         volume.profile.TryGet(out colorAdjustments);
         volume.profile.TryGet(out bloom);
 
-        //currentObjective = 0;
+        currentObjective = 4;
         //currentCheckpoint = 0;
-        firewoodCollected = 0;
 
         if(SceneManager.GetActiveScene().buildIndex != 1) {  // If main menu / ending
             Cursor.lockState = CursorLockMode.None;
@@ -226,11 +226,13 @@ public class GameController : MonoBehaviour
 
     /* Events */
     public void HandleBuildFire() {
+        woodBundle.SetActive(false);
         campfireTransparent.SetActive(false);
         campfire.SetActive(true);
         campfire.tag = "Start Fire";
+        hasFirewood = false;
 
-        zippo.tag = "Zippo";
+        zippo.tag = "Zippy";
         zippo.GetComponent<BoxCollider>().enabled = true;
         lighterFluid.tag = "Lighter Fluid";
         lighterFluid.GetComponent<BoxCollider>().enabled = true;
@@ -242,7 +244,7 @@ public class GameController : MonoBehaviour
         switch(item) {
             case "Zippy":
                 hasZippo = true;
-                interactables.TogglePauseMenuObject("zippo", true);
+                interactables.TogglePauseMenuObject("zippy", true);
                 if(hasLighterFluid) {
                     StartCoroutine(HandleNextObjective());
                 }
@@ -258,50 +260,43 @@ public class GameController : MonoBehaviour
                 hasCarKeys = true;
                 interactables.TogglePauseMenuObject("keys", true);
                 StartCoroutine(HandleNextObjective());
-
                 // Change player car tag? Can now leave?
-
                 break;
             case "Firewood":
-                firewoodCollected ++;
-
-                if(firewoodCollected < firewoodMax) {
-                    StartCoroutine(DisplayPopupMessage("Collect firewood (" + firewoodCollected + " of " + firewoodMax + ")"));
-                } else {
-                    StartCoroutine(DisplayPopupMessage("Time to build a fire"));
-                    playerNeedsFirewood = false;
-                    StartCoroutine(HandleNextObjective());
-
-                    campfireTransparent.SetActive(true); // Enable transparent campfire for interaction
-
-                    foreach(GameObject wood in firewood) {
-                        wood.tag = "Untagged";
-                        var woodCollider = wood.GetComponent<BoxCollider>();
-                        woodCollider.enabled = false;
-                    }
-                    foreach(GameObject tent in tents) {
-                        tent.SetActive(true);
-                    }
+                hasFirewood = true;
+                StartCoroutine(HandleNextObjective());
+                campfireTransparent.SetActive(true); // Enable transparent campfire for interaction
+                foreach(GameObject wood in firewood) {
+                    wood.SetActive(false);
                 }
+                woodBundle.SetActive(true);
 
+                foreach(GameObject tent in tentObjects) {
+                    tent.SetActive(true);
+                }
                 break;
             }
 
         itemPickupAudio.Play();
     }
 
-        public IEnumerator StartCampFire() {
+    public IEnumerator StartCampFire() {
         fpHighlights.ClearHighlighted();
 
         campfire.tag = "Untagged";
         campfireCollider.tag = "Untagged";
+        playerTent.tag = "Go To Sleep";
 
-        interactables.TogglePauseMenuObject("zippo", false);
+        interactables.TogglePauseMenuObject("zippy", false);
         interactables.TogglePauseMenuObject("lighterFluid", false);
 
         // Animation of lighter fluid pouring onto fire
         // Animation of zippo starting fire? 
         //   or match thrown onto fire? (change from zippo -> match?)
+
+        fireStarted = true;
+        StartCoroutine(HandleNextObjective());
+
         var smallFire = Instantiate(fireSmall, campfirePosition.position, Quaternion.identity);
         yield return new WaitForSecondsRealtime(smallFireTime);
         Destroy(smallFire);
@@ -309,30 +304,40 @@ public class GameController : MonoBehaviour
         yield return new WaitForSecondsRealtime(mediumFireTime);
         Destroy(mediumFire);
         Instantiate(fireBigSmoke, campfirePosition.position, Quaternion.identity);
-        fireStarted = true;
 
-        StartCoroutine(HandleNextObjective());
-        
         hunter.SetActive(true);
     }
 
-    public void TransitionToNighttime() {
+    public IEnumerator TransitionToNighttime() {
+        //fade out
+        //short cutscene showing camp fire, fade out
+        yield return new WaitForSeconds(1f);
+        //display 3:02 am time
+
         RenderSettings.skybox = nightSkyboxMat;
         directionalLightDay.SetActive(false);
         directionalLightNight.SetActive(true);
-
         colorAdjustments.hueShift.value = 2f;
-        /* Disable david's tent flap, not the other one
-         player has to open theirs with e, tent sound & fade out/in
+        
+        yield return new WaitForSeconds(2f);
+        //fade in
+        //player can look around but not move, can interact with tent flap
+        playerTent.tag = "Leave Tent";
+    }
+    public void HandleLeaveTent() {
+        // fade out 1-2 sec, play zip sfx, fade in 1-2 sec
+        // Disable all tent flaps
+        tentObjects[0].SetActive(false);
+        tentObjects[1].SetActive(false);
+        tentObjects[1].SetActive(false);
+        playerTent.tag = "Untagged";
+        //blood vfx on ground near tent? or does that clue player in too soon? maybe a trail starting in woods nearby
 
-        foreach(GameObject tentFlap in tentFlaps) {
-            tentFlap.SetActive(false);
-        }
-        */
-
-        //davidRef.tag = "Untagged"; // Set tag to null; disable dialog
-        //var davidCharacter = davidRef.GetComponent<CharacterAI>();
-        //davidCharacter.StateRef = CharacterAI.State.dead;
+        davidRef.SetActive(false);
+        // blood vfx on ground near body?
+        deadBody.SetActive(true);
+        // enable killers?
+        // enable "hider" killer in one of 10? 12? randomized spots?
     }
 
     public void StartDriveToParkCutscene() {

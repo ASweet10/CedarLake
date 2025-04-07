@@ -52,10 +52,13 @@ public class Interactables : MonoBehaviour
 
     [Header ("Pause Menu")]
     [SerializeField] GameObject pauseMenuLighterFluid;
-    [SerializeField] GameObject pauseMenuZippo;
+    [SerializeField] GameObject pauseMenuZippy;
     [SerializeField] GameObject pauseMenuKeychain;
     [SerializeField] GameObject[] pauseMenuDrinks;
-
+    [SerializeField] GameObject inventoryLighterFluid;
+    [SerializeField] GameObject inventoryZippy;
+    [SerializeField] GameObject inventoryMenuKeychain;
+    [SerializeField] GameObject inventoryMenuDrink;
 
 
     [Header("Arcade")]
@@ -172,17 +175,21 @@ public class Interactables : MonoBehaviour
 
     public void TogglePauseMenuObject(string objectName, bool choice) {
         switch(objectName) {
-            case "zippo":
-                pauseMenuZippo.SetActive(choice);
+            case "zippy":
+                pauseMenuZippy.SetActive(choice);
+                inventoryZippy.SetActive(choice);
                 break;
             case "lighterFluid":
                 pauseMenuLighterFluid.SetActive(choice);
+                inventoryLighterFluid.SetActive(choice);
                 break;
             case "keys":
                 pauseMenuKeychain.SetActive(choice);
+                inventoryMenuKeychain.SetActive(choice);
                 break;
             case "drink":
                 pauseMenuDrinks[drinkIndex].SetActive(choice);
+                inventoryMenuDrink.SetActive(choice);
                 break;
             default:
                 break;
