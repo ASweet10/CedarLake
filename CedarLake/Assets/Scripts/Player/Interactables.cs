@@ -26,7 +26,6 @@ public class Interactables : MonoBehaviour
     [SerializeField] GameObject missingUI_Amir;
     [SerializeField] GameObject gasStationNewspaperUI;
     [SerializeField] GameObject stateParkNewspaperUI;
-    [SerializeField] GameObject carNoteUI;
     [SerializeField] GameObject UICamera;
     [SerializeField] TMP_Text interactText;
 
@@ -47,6 +46,7 @@ public class Interactables : MonoBehaviour
     [SerializeField] TMP_Text drinkTitle;
     [SerializeField] TMP_Text drinkDescription;
     [SerializeField] AudioSource drinkAudio;
+    [SerializeField] GameObject drinkLight;
     public int drinkIndex;
 
 
@@ -73,7 +73,6 @@ public class Interactables : MonoBehaviour
     [SerializeField] FirstPersonController firstPersonController;
     [SerializeField] MouseLook mouseLook;
     [SerializeField] AudioSource arcadeCoinSound;
-    [SerializeField] AudioSource arcadeMusicLoop;
     [SerializeField] AudioClip arcadeMusic;
     [SerializeField] AudioClip arcadeCoinSFX;
     [SerializeField] TMP_Text escapeToExitText;
@@ -120,6 +119,7 @@ public class Interactables : MonoBehaviour
     public void ToggleDrinksUI(bool choice) {   // Drinks in gas station
         drinkUI.SetActive(choice);
         UICamera.SetActive(choice);
+        drinkLight.SetActive(choice);
         drinkOptions[0].SetActive(choice);
         if(choice) {
             drinkTitle.text = drinkOptions[drinkIndex].name;
@@ -149,24 +149,13 @@ public class Interactables : MonoBehaviour
         fpHighlights.ClearHighlighted();
         Disable3DDrinks();
         drinkUI.SetActive(false);
+        drinkLight.SetActive(false);
         fpController.DisablePlayerMovement(false, false);
     }
 
     public void UseDrink() {
-        switch(gameController.chosenDrinkIndex) {
-            case 0:
-                //"Orange Juice [+5 top speed 1 min]"
-                break;
-            case 1:
-                //"Coffee [x2 max stamina 30 sec]"
-                break;
-            case 2:
-                //"Noca Cola [+10 top speed 15 sec]"
-                break;
-            case 3:
-                //"Energy Drink [Unlimited stamina 15 sec]"
-                break;
-        }
+        StartCoroutine(fpController.HandleDrinkEffect());
+        
         ToggleUseDrinkUI(false);
         gameController.hasDrink = false;
         TogglePauseMenuObject("drink", false);
@@ -218,9 +207,6 @@ public class Interactables : MonoBehaviour
             case "Newspaper_StatePark":
                 stateParkNewspaperUI.SetActive(choice);
                 break;
-            case "StartingNote":
-                carNoteUI.SetActive(choice);
-                break;
         }
     }
 
@@ -257,10 +243,6 @@ public class Interactables : MonoBehaviour
                 return;
             } else if(stateParkNewspaperUI.activeInHierarchy) {
                 ToggleMissingUI("Newspaper_StatePark", false);
-                fpController.DisablePlayerMovement(false, false);
-                return;
-            } else if(carNoteUI.activeInHierarchy) {
-                ToggleMissingUI("StartingNote", false);
                 fpController.DisablePlayerMovement(false, false);
                 return;
             } else if(dialogueUI.activeInHierarchy) {
@@ -314,7 +296,6 @@ public class Interactables : MonoBehaviour
 
             arcadeCoinSound.Play();
             yield return new WaitForSeconds(1.5f);
-            arcadeMusicLoop.Stop();
             arcadeStartScreen.SetActive(false);
             arcadeLevelOne.SetActive(true);
             arcadePlayerCamera.enabled = true;
@@ -322,7 +303,6 @@ public class Interactables : MonoBehaviour
 
             arcadeController.ResetArcadePlayerPosition();
             arcadeWolfScript.ResetWolfPosition();
-            arcadeController.ResetStartTime(); // not working; wolf autospawns when you play again
 
             arcadeController.CanMove = true;
             arcadeCoinSound.clip = arcadeMusic;
@@ -347,7 +327,6 @@ public class Interactables : MonoBehaviour
                 arcadeDeathUI.SetActive(false);
             }
             arcadeStartScreen.SetActive(true);
-            arcadeMusicLoop.Play();
             escapeToExitText.enabled = false;
         }
     }

@@ -4,17 +4,14 @@ using UnityEngine;
 
 public class FieldOfView : MonoBehaviour
 {
-    public float innerRadius;
-    public float outerRadius;
+    public float radius;
     public float angle;
-
     public GameObject playerRef;
 
     [SerializeField] LayerMask targetMask;
     [SerializeField] LayerMask obstacleMask;
 
     public bool canSeePlayer = false;
-    public bool canSeeSilhouette = false;
 
     private void Update() {
         StartCoroutine(FOVCoroutine());
@@ -23,26 +20,22 @@ public class FieldOfView : MonoBehaviour
     private IEnumerator FOVCoroutine(){
         while (true) {
             yield return new WaitForSeconds(0.2f);
-            CheckInnerFOV();
-            CheckOuterFOV();
+            CheckFOV();
         }
     }
 
-    private void CheckInnerFOV() {
-        Collider[] innerRangeChecks = Physics.OverlapSphere(transform.position, innerRadius, targetMask);
+    private void CheckFOV() {
+        Collider[] rangeChecks = Physics.OverlapSphere(transform.position, radius, targetMask);
 
-        if(innerRangeChecks.Length != 0){
-
-            Transform target = innerRangeChecks[0].transform;
+        if(rangeChecks.Length != 0) {
+            Transform target = rangeChecks[0].transform;
             Vector3 directionToTarget = (target.position - transform.position).normalized;
 
             if(Vector3.Angle(transform.forward, directionToTarget) < angle / 2) {
 
                 float distanceToTarget = Vector3.Distance(transform.position, target.position);
-
                 if(!Physics.Raycast(transform.position, directionToTarget, distanceToTarget, obstacleMask)){
                     canSeePlayer = true;
-                    //Debug.Log("Can see player");
                 } else {
                     canSeePlayer = false;
                 }
@@ -50,35 +43,8 @@ public class FieldOfView : MonoBehaviour
                 canSeePlayer = false;
             }
         }
-        else if(canSeePlayer){  // canSeePlayer was true but nothing in RangeChecks now
+        else if(canSeePlayer){
             canSeePlayer = false;
-        }
-    }
-
-    private void CheckOuterFOV() {
-        Collider[] rangeChecks = Physics.OverlapSphere(transform.position, outerRadius, targetMask);
-
-        if(rangeChecks.Length != 0){
-
-            Transform target = rangeChecks[0].transform;
-            Vector3 directionToTarget = (target.position - transform.position).normalized;
-
-            if(Vector3.Angle(transform.forward, directionToTarget) < angle / 2) {
-
-                float distanceToTarget = Vector3.Distance(transform.position, target.position);
-
-                if(!Physics.Raycast(transform.position, directionToTarget, distanceToTarget, obstacleMask)){
-                    canSeeSilhouette = true;
-                    //Debug.Log("Is that you, Francis?");
-                } else {
-                    canSeeSilhouette = false;
-                }
-            } else {
-                canSeeSilhouette = false;
-            }
-        }
-        else if(canSeePlayer){  // canSeePlayer was true but nothing in RangeChecks now
-            canSeeSilhouette = false;
         }
     }
 }

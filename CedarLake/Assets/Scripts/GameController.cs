@@ -11,8 +11,10 @@ public class GameController : MonoBehaviour
     [SerializeField] GameObject playerRef;
     [SerializeField] GameObject pauseMenuUI;
     [SerializeField] GameObject quitGameOptionUI;
+    [SerializeField] GameObject leaveEarlyUI;
     [SerializeField] Interactables interactables;
     [SerializeField] SceneController sceneController;
+
 
 
     [Header("Objectives")]
@@ -24,9 +26,9 @@ public class GameController : MonoBehaviour
     public int currentObjective = 4;
 
 
+
     public bool holdingGasStationItem = false;
     public bool hasPurchasedGas = false;
-    public bool hasReadCarNote = false;
     public bool hasZippo = false;
     public bool hasLighterFluid = false;
     public bool hasCarKeys = false;
@@ -38,9 +40,11 @@ public class GameController : MonoBehaviour
 
     public bool hasDrink = false;
     public int chosenDrinkIndex = 0;
+    public string currentSpeaker;
     
 
-    [Header ("Player Death & Checkpoints")]
+
+    [Header("Player Death & Checkpoints")]
     [SerializeField] Camera mainCamera;
     [SerializeField] Camera deathCamera;
     [SerializeField] GameObject playerDeath3DObject;
@@ -60,17 +64,15 @@ public class GameController : MonoBehaviour
     [SerializeField] GameObject[] expositionUIObjects;
 
 
-    
-    [Header ("Endings")]
+
+    [Header("Endings")]
+    [SerializeField] GameObject endingUI;
     [SerializeField] TMP_Text endingHeader;
     [SerializeField] TMP_Text endingMessage;
-    List<string> endingMessages = new List<string>() {
-        "You thought about it and realized this is probably a bad idea. You'd rather be at home snuggled up in a blanket.",
-        "You managed to escape and immediately alerted the authorities. You tell them that, unfortunately, you weren't able to save your friends.",
-        "Most people would focus on saving their own skin and you went back. You are truly a good friend."
-    };
 
-    [Header ("Events")]
+
+
+    [Header("Events")]
     FirstPersonHighlights fpHighlights;
     [SerializeField] AudioSource itemPickupAudio;
     [SerializeField] GameObject hunter;
@@ -89,10 +91,12 @@ public class GameController : MonoBehaviour
     [SerializeField] GameObject campfireCollider;
     [SerializeField] GameObject campfireTransparent;
     [SerializeField] Transform campfirePosition;
+    [SerializeField] Animator fireAnimator;
     float smallFireTime = 5f;
     float mediumFireTime = 10f;
 
-    
+
+
     [Header("Day/Night")]
     [SerializeField] Material nightSkyboxMat;
     [SerializeField] GameObject directionalLightDay;
@@ -101,6 +105,7 @@ public class GameController : MonoBehaviour
     [SerializeField] GameObject deadBody;
     [SerializeField] GameObject[] tentObjects;
     [SerializeField] GameObject playerTent;
+    [SerializeField] GameObject axeInStump;
     Volume volume;
     ColorAdjustments colorAdjustments;
     Bloom bloom;
@@ -113,6 +118,11 @@ public class GameController : MonoBehaviour
         volume.profile.TryGet(out colorAdjustments);
         volume.profile.TryGet(out bloom);
 
+
+        foreach(GameObject killer in killers) {
+            KillerAI aiRef = killer.GetComponent<KillerAI>();
+            aiRef.enabled = true;
+        }
         currentObjective = 4;
         //currentCheckpoint = 0;
 
@@ -128,56 +138,22 @@ public class GameController : MonoBehaviour
 
     void Update() {
         if(Input.GetKeyDown(KeyCode.Alpha3)) {
-            TransitionToNighttime();
+            StartCoroutine(TransitionToNighttime());
         }
     }
 
     public void ReplayFromDeath() {
         playerRef.transform.position = restartPositions[currentCheckpoint].position;
         playerRef.transform.rotation = restartPositions[currentCheckpoint].rotation;
-    }
 
-    /**** Menus ****/
-    public void OpenQuitGameUI() {
-        quitGameOptionUI.SetActive(true);
-    }
-    public void DeclineQuitGame() {
-        quitGameOptionUI.SetActive(false);
-    }
-    public void ConfirmQuitGame() {
-        Application.Quit();
-    }
-
-    public void ToggleOptionsMenu(bool toggle) {
-        mainMenuUI.SetActive(!toggle);
-        optionsMenuUI.SetActive(toggle);
-    }
-    public void PlayGameButton() {
-        StartCoroutine(sceneController.PanCameraOnPlay());
-        //StartCoroutine(sceneController.FadeOut(2, 1));
-    }
-    public void ReturnToMainMenu() {
-        SceneManager.LoadScene(0);
-    }
-
-    public void ResumeGame() {
-        objectiveTextInPauseMenu.enabled = false;
-        pauseMenuUI.SetActive(false);
-        popupText.enabled = true;
-        AudioListener.volume = 1f;
         fpController.DisablePlayerMovement(false, false);
-        //Time.timeScale = 1f;
+        fpController.EnableCollider(true);
+        deathCamera.enabled = false;
+        mainCamera.enabled = true;
+        deathUI.SetActive(false);
+        playerDeath3DObject.SetActive(false);
     }
-    public void PauseGame() {
-        pauseMenuUI.SetActive(true);
-        popupText.enabled = false;
-        objectiveTextInPauseMenu.enabled = true;
-        objectiveTextInPauseMenu.text = gameObjectives[currentObjective];
-        AudioListener.volume = 0.3f;
-        fpController.DisablePlayerMovement(true, true);
-        //Time.timeScale = 0f;
-    }
-    
+   
 
     /* Text Display */
     public IEnumerator DisplayPopupMessage(string message) {
@@ -192,36 +168,10 @@ public class GameController : MonoBehaviour
         yield return new WaitForSeconds(4);
         objectivePopupText.enabled = false;
     }
-
-    public IEnumerator HandlePlayerDeath() {    
-        fpController.DisablePlayerMovement(true, true);
-        deathCamera.enabled = true;
-        mainCamera.enabled = false;
-        deathUI.SetActive(true);
-        playerDeath3DObject.SetActive(true);
-
-        foreach(GameObject killer in killers) {
-            KillerAI aiRef = killer.GetComponent<KillerAI>();
-            //aiRef.state = Killer.State.idle;
-            //aiRef.state = Killer.State.patrol; ?
-        }
-
-        int deathClipIndex = Random.Range(0, playerDeathClips.Length - 1);
-        deathClipIndex = 3;
-        playerDeathAnimator.SetInteger("deathClipIndex", deathClipIndex);
-
-        yield return new WaitForSeconds(5f);
-        if(deathClipIndex == 2) {
-            bloodPool.SetActive(true);
-        }
-    }
-
-
     public void SetEndingMessage(int endingNumber) {
         endingHeader.text = "Ending " + (endingNumber + 1) + " of 3";
-        endingMessage.text = endingMessages[endingNumber];
-    }
 
+    }
 
 
     /* Events */
@@ -280,7 +230,7 @@ public class GameController : MonoBehaviour
         itemPickupAudio.Play();
     }
 
-    public IEnumerator StartCampFire() {
+    public void StartCampFire() {
         fpHighlights.ClearHighlighted();
 
         campfire.tag = "Untagged";
@@ -290,13 +240,16 @@ public class GameController : MonoBehaviour
         interactables.TogglePauseMenuObject("zippy", false);
         interactables.TogglePauseMenuObject("lighterFluid", false);
 
-        // Animation of lighter fluid pouring onto fire
-        // Animation of zippo starting fire? 
-        //   or match thrown onto fire? (change from zippo -> match?)
-
+        StartCoroutine(HandleFireAnimation());
         fireStarted = true;
-        StartCoroutine(HandleNextObjective());
 
+        StartCoroutine(HandleNextObjective());
+        hunter.SetActive(true);
+    }
+
+    IEnumerator HandleFireAnimation() {
+        fireAnimator.Play("StartFire");
+        yield return new WaitForSeconds(7f);
         var smallFire = Instantiate(fireSmall, campfirePosition.position, Quaternion.identity);
         yield return new WaitForSecondsRealtime(smallFireTime);
         Destroy(smallFire);
@@ -304,8 +257,6 @@ public class GameController : MonoBehaviour
         yield return new WaitForSecondsRealtime(mediumFireTime);
         Destroy(mediumFire);
         Instantiate(fireBigSmoke, campfirePosition.position, Quaternion.identity);
-
-        hunter.SetActive(true);
     }
 
     public IEnumerator TransitionToNighttime() {
@@ -313,6 +264,9 @@ public class GameController : MonoBehaviour
         //short cutscene showing camp fire, fade out
         yield return new WaitForSeconds(1f);
         //display 3:02 am time
+
+        tentObjects[0].SetActive(false); // disable tent flap (David)
+        axeInStump.SetActive(false);
 
         RenderSettings.skybox = nightSkyboxMat;
         directionalLightDay.SetActive(false);
@@ -342,5 +296,89 @@ public class GameController : MonoBehaviour
 
     public void StartDriveToParkCutscene() {
 
+    }
+
+    public void HandlePlayerDeath() {    
+        fpController.DisablePlayerMovement(true, true);
+        fpController.EnableCollider(false);
+        deathCamera.enabled = true;
+        mainCamera.enabled = false;
+        deathUI.SetActive(true);
+        playerDeath3DObject.SetActive(true);
+
+        int deathClipIndex = Random.Range(0, playerDeathClips.Length - 1);
+        playerDeathAnimator.SetInteger("deathClipIndex", deathClipIndex);
+    }
+
+    public void HandleEndGame(int endingNumber) {
+        // fade out
+        // car starting sfx
+        fpController.DisablePlayerMovement(true, true);
+        fpController.EnableCollider(false);
+        endingUI.SetActive(true);
+
+        switch (endingNumber) {
+            case 1:
+                endingHeader.text = "I";
+                endingMessage.text = "You thought about it and realized this is probably a bad idea. You'd rather be at home snuggled up in a blanket.";
+                break;
+            case 2:
+                endingHeader.text = "II";
+                endingMessage.text = "You managed to escape and immediately alerted the authorities. You tell them that you weren't able to save your friends.";
+                break;
+            case 3:
+                endingHeader.text = "III";
+                endingMessage.text = "Most would focus on saving their own skin and you went back. You are truly a good friend.";
+                break;
+        }
+    }
+
+    /**** Menus ****/
+    public void OpenLeaveEarlyUI() {
+        leaveEarlyUI.SetActive(true);
+    }
+    public void DeclineLeaveEarly() {
+        leaveEarlyUI.SetActive(false);
+    }
+    public void ConfirmLeaveEarly() {
+        HandleEndGame(1);
+    }
+    public void OpenQuitGameUI()
+    {
+        quitGameOptionUI.SetActive(true);
+    }
+    public void DeclineQuitGame() {
+        quitGameOptionUI.SetActive(false);
+    }
+    public void ConfirmQuitGame() {
+        Application.Quit();
+    }
+
+    public void ToggleOptionsMenu(bool toggle) {
+        mainMenuUI.SetActive(!toggle);
+        optionsMenuUI.SetActive(toggle);
+    }
+    public void PlayGameButton() {
+        StartCoroutine(sceneController.PanCameraOnPlay());
+        //StartCoroutine(sceneController.FadeOut(2, 1));
+    }
+    public void ReturnToMainMenu() {
+        SceneManager.LoadScene(0);
+    }
+
+    public void ResumeGame() {
+        objectiveTextInPauseMenu.enabled = false;
+        pauseMenuUI.SetActive(false);
+        popupText.enabled = true;
+        AudioListener.volume = 1f;
+        fpController.DisablePlayerMovement(false, false);
+    }
+    public void PauseGame() {
+        pauseMenuUI.SetActive(true);
+        popupText.enabled = false;
+        objectiveTextInPauseMenu.enabled = true;
+        objectiveTextInPauseMenu.text = gameObjectives[currentObjective];
+        AudioListener.volume = 0.3f;
+        fpController.DisablePlayerMovement(true, true);
     }
 }

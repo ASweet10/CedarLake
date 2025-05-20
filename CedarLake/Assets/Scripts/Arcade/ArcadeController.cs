@@ -7,7 +7,9 @@ public class ArcadeController : MonoBehaviour
 {
     [SerializeField] GameObject arcadeWolfObject;
     ArcadeWolf arcadeWolfController;
-    [SerializeField] GameObject deathUI;
+    [SerializeField] GameObject startScreen;
+    [SerializeField] GameObject deathScreen;
+    [SerializeField] GameObject winGameScreen;
     [SerializeField] GameObject arcadeLevelOne;
     [SerializeField] GameObject arcadeBloodScreen;
     [SerializeField] GameObject arcadeBackground;
@@ -18,7 +20,10 @@ public class ArcadeController : MonoBehaviour
     [SerializeField] Transform arcadePlayerTF;
     [SerializeField] Transform playerStartPosition;
     [SerializeField] Light arcadeLight;
-    float moveSpeed = 1.5f;
+    [SerializeField] Camera startCamera;
+    [SerializeField] Camera playerCamera;
+
+    float moveSpeed = 1.6f;
     int playerLives;
     int maxLives = 3;
     bool canMove;
@@ -26,9 +31,7 @@ public class ArcadeController : MonoBehaviour
         get { return canMove; }
         set { canMove = value; }
     }
-    bool wolfSpawned;
     bool facingRight;
-    float startTime;
 
     void Start() {
         wolfSnarlAudio = gameObject.GetComponent<AudioSource>();
@@ -37,16 +40,18 @@ public class ArcadeController : MonoBehaviour
         playerLives = maxLives;
         canMove = true;
         facingRight = true;
-        startTime = Time.time;
-        wolfSpawned = false;
     }
     void Update() {
+        /*
         if(Time.time - startTime > 6f) {
             if(!wolfSpawned) {
                 arcadeWolfObject.SetActive(true);
                 wolfSpawned = true;
             }
         }
+        */
+        
+        arcadeWolfObject.SetActive(true);
         MovePlayerOnInput();
     }
     void MovePlayerOnInput() {
@@ -81,8 +86,6 @@ public class ArcadeController : MonoBehaviour
         playerLives --;
         if(playerLives <= 0) {
             StartCoroutine(HandleArcadeGameOver());
-        } else {
-            // screen gets bloodier? some feedback
         }
     }
 
@@ -91,29 +94,40 @@ public class ArcadeController : MonoBehaviour
         anim.SetBool("isWalking", false);
         arcadeLevelOne.SetActive(false);
         wolfSnarlAudio.Play();
+        playerCamera.enabled = false;
+        startCamera.enabled = true;
         arcadeBackground.SetActive(false);
         arcadeBloodScreen.SetActive(true);
         arcadeLight.enabled = false;
         
-        yield return new WaitForSeconds(2f);
+        yield return new WaitForSeconds(1f);
         arcadeBloodScreen.SetActive(false);
         arcadeBackground.SetActive(true);
         arcadeLight.enabled = true;
-        deathUI.SetActive(true);
+        deathScreen.SetActive(true);
+
+        yield return new WaitForSeconds(3f);
+        deathScreen.SetActive(false);
+        startScreen.SetActive(true);
+        
+    }
+
+    public void HandleWinGame() {
+        canMove = false;
+        anim.SetBool("isWalking", false);
+        arcadeLevelOne.SetActive(false);
+        winGameScreen.SetActive(true);
     }
 
     public void ResetArcadePlayerPosition() {
         arcadePlayerTF.position = playerStartPosition.position;
     }
-    public void ResetStartTime() {
-        startTime = Time.time;
-    }
 
     public IEnumerator DisableMovementAndTransitionScreen() {
         canMove = false;
-        arcadeWolfController.CanMove = false;
+        arcadeWolfController.SetCanMove(false);
         yield return new WaitForSeconds(2f);
         canMove = true;
-        arcadeWolfController.CanMove = true;
+        arcadeWolfController.SetCanMove(true);
     }
 }

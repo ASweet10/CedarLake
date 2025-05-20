@@ -35,6 +35,7 @@ public class dialogueString {
     public int option1IndexJump;
     public int option2IndexJump;
     public int option3IndexJump;
+    public int numberOfAnswers;
 
     [Header("Triggered Events")]
     public UnityEvent startDialogueEvent;

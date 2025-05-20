@@ -8,30 +8,34 @@ public class CharacterAI : MonoBehaviour
     [SerializeField] Animator anim;
     [SerializeField] Transform playerTF;
     [SerializeField] Transform killerTF;
+    [SerializeField] MovementSFX movementSFX;
     [SerializeField] Transform[] waypoints;
     [SerializeField] float turnSpeed = 60f;
     [SerializeField, Range(1, 5)] float walkSpeed = 2f;
     NavMeshAgent agent;
-
     Transform tf;
-    AudioSource footstepAudioSource;
-    int currentWP = 0;
+
     public enum State{ idle, walkingToWaypoint, talking, hiding, followingPlayer, dead };
     State state = State.idle;
     public State StateRef {
         get { return state; }
         set { state = value; }
     }
+    public State lastState;
     public bool injured;
+    int currentWP = 0;
 
     void Start () {
         agent = gameObject.GetComponent<NavMeshAgent>();
         anim = gameObject.GetComponent<Animator>();
         tf = gameObject.GetComponent<Transform>();
+
         if(gameObject.tag == "Cashier") {
             state = State.idle;
+            lastState = State.idle;
         } else {
             state = State.walkingToWaypoint;
+            lastState = State.walkingToWaypoint;
         }
         injured = false;
     }
@@ -69,14 +73,14 @@ public class CharacterAI : MonoBehaviour
                 anim.SetBool("idle", false);
                 anim.SetBool("walking", true);
                 agent.SetDestination(waypoints[currentWP].position);
-                
+                //movementSFX.HandleMovementSFX();
             } else {
                 currentWP++;
-                Debug.Log("currentwp" + currentWP);
             }
         } else {
             anim.SetBool("walking", false);
             state = State.idle;
+            lastState = State.walkingToWaypoint;
         }
     }
     
@@ -85,7 +89,12 @@ public class CharacterAI : MonoBehaviour
         Quaternion rotation = Quaternion.LookRotation(targetPosition);
         tf.rotation = Quaternion.Slerp(tf.rotation, rotation, Time.deltaTime * turnSpeed);
         tf.localEulerAngles = new Vector3(0f, tf.localEulerAngles.y, 0);
+        
+        agent.isStopped = true;
+        anim.SetBool("walking", false);
+        anim.SetBool("talking", true);
 
+        lastState = state;
         state = State.talking;
     }
 
@@ -98,6 +107,7 @@ public class CharacterAI : MonoBehaviour
                 anim.SetBool("idle", false);
                 agent.isStopped = false;
                 state = State.followingPlayer;
+                lastState = State.idle;
             }
         }
 

@@ -1,8 +1,8 @@
 using System.Collections;
 using UnityEngine;
-using UnityEngine.UI;
 using UnityEngine.Rendering.Universal;
 using UnityEngine.Rendering;
+using UnityEngine.UI;
 
 public class FirstPersonController : MonoBehaviour
 {
@@ -10,6 +10,7 @@ public class FirstPersonController : MonoBehaviour
     Transform tf;
     [SerializeField] Camera mainCamera;
     [SerializeField] MouseLook mouseLook;
+    MovementSFX movementSFX;
 
     [SerializeField] FlashlightToggle flashlight;
     FirstPersonHighlights fpHighlights;
@@ -32,45 +33,32 @@ public class FirstPersonController : MonoBehaviour
     KeyCode sprintKey = KeyCode.LeftShift;
     Vector2 currentInput;
     Vector3 currentMovement;
-    bool isSprinting => canSprint && Input.GetKey(sprintKey);
-    bool isMoving => Input.GetAxis("Horizontal") != 0 || Input.GetAxis("Vertical") != 0;
-
-
-
-    [Header("Footsteps")]
-    TerrainTexDetector terrainTexDetector;
-    AudioSource footstepAudioSource;
-    [SerializeField] AudioClip[] grassClips;
-    [SerializeField] AudioClip[] concreteClips;
-    [SerializeField] AudioClip[] dirtClips;
-    float baseStepSpeed = 0.5f;
-    float crouchStepMultiplier = 1.5f;
-    float sprintStepMultiplier = 0.6f;
-    float footstepTimer = 0;
-    float GetCurrentOffset => isCrouching ? baseStepSpeed * crouchStepMultiplier : isSprinting ? baseStepSpeed * sprintStepMultiplier : baseStepSpeed;
-    public int terrainDataIndex;
-
+    public bool isSprinting => canSprint && Input.GetKey(sprintKey);
+    public bool isMoving => Input.GetAxis("Horizontal") != 0 || Input.GetAxis("Vertical") != 0;
 
 
     [Header("Health")]
     [SerializeField] AudioSource damageAudio;
-    [SerializeField] GameObject bleedingUI;
-    [SerializeField] RawImage bloodParticles;
-    Volume volume;
-    Vignette vignette = null;
-    float lastDamageTime;
-    float maxHealth = 10;
+    [SerializeField] AudioSource heartbeatAudio;
+    [SerializeField] RawImage bloodUI;
+    [SerializeField] GameObject redBG;
+    [SerializeField] Volume volume;
+    Vignette vignette;
+    ColorAdjustments colorAdjustments;
+    float maxHealth = 3;
     float currentHealth;
+    [SerializeField] float maxVignetteIntensity = 0.7f;
+    [SerializeField] float maxSaturation = 75f;
     bool canTakeDamage = true;
+    bool isRegenerating = false;
 
 
 
     [Header("Stamina")]
-    [SerializeField, Range(1, 20)] float maxStamina = 15f;
+    [SerializeField] float maxStamina = 15f; // [SerializeField, Range(1, 20)]
     [SerializeField] AudioSource windedAudio;
     float currentStamina;
     bool canSprint = true;
-
 
 
     // Sliding
@@ -85,7 +73,7 @@ public class FirstPersonController : MonoBehaviour
     [SerializeField] Vector3 standCenter = new Vector3(0, 0, 0);
     [SerializeField] float timeToCrouch = 0.25f;
     [SerializeField, Range(1, 5)] float crouchSpeed = 2.5f;
-    bool isCrouching;
+    public bool isCrouching;
     bool duringCrouchAnimation;
     bool canCrouch = true;
 
@@ -102,152 +90,147 @@ public class FirstPersonController : MonoBehaviour
 
 
     GameController gameController;
-
     public bool canMove = true;
 
     void Awake() {
         fpHighlights = gameObject.GetComponent<FirstPersonHighlights>();
-        footstepAudioSource = gameObject.GetComponent<AudioSource>();
         controller = gameObject.GetComponent<CharacterController>();
-        terrainTexDetector = gameObject.GetComponent<TerrainTexDetector>();
+        movementSFX = gameObject.GetComponent<MovementSFX>();
         gameController = GameObject.FindGameObjectWithTag("GameController").GetComponent<GameController>();
         defaultYPosition = mainCamera.transform.localPosition.y; // Return camera to default position when not moving
         tf = gameObject.GetComponent<Transform>();
 
         volume = GameObject.FindGameObjectWithTag("GameController").GetComponent<Volume>();
-        //volume.profile.TryGetSettings(out vignette);
+        volume.profile.TryGet(out vignette);
+        volume.profile.TryGet(out colorAdjustments);
     }
 
-    void Start() {
+    void Start() {  
         DisablePlayerMovement(false, false);
         currentStamina = maxStamina;
         currentHealth = maxHealth;
     }
     
     void Update() {
-        if(Input.GetKeyDown(KeyCode.L)) {
-            StartCoroutine(TakeDamageAndWait(2));
+        if(Input.GetKeyDown(KeyCode.Alpha4)) {
+            HandleTakeDamage();
         }
         if(canMove) {
-            //terrainDataIndex = terrainTexDetector.GetActiveTerrainTextureIdx(tf.position);
             HandleMovementInput();
             if(canCrouch) { 
                 AttemptToCrouch(); 
             }
             HandleHeadbobEffect();
             HandleStamina();
-            HandleMovementSFX();
+            //movementSFX.HandleMovementSFX();
             ApplyFinalMovement();
+
         }
-
-        //Debug.Log("current hp: " + currentHealth);
     }
-   
 
-    public void TakeAxeDamage() {
+    public void HandleTakeDamage() {
         if(canTakeDamage) {
-            StartCoroutine(TakeDamageAndWait(2));
+            canTakeDamage = false;
+            currentHealth -= 1;
+            damageAudio.Play();
+
+            UpdatePostProcessingEffects();
+
+            if(currentHealth > 0) {
+                StartCoroutine(RegenerateHealth());
+            } else {
+                heartbeatAudio.Stop();
+                redBG.SetActive(false);
+                bloodUI.enabled = false;
+                StopCoroutine(RegenerateHealth());
+                gameController.HandlePlayerDeath();
+            }
         }
     }
-    IEnumerator TakeDamageAndWait(int damageValue) {
-        canTakeDamage = false;
-        lastDamageTime = Time.time;
-        currentHealth --;
-        damageAudio.Play();
 
-        switch(currentHealth) {
-            case float currentHealth when currentHealth > 6 && currentHealth < 10:
-                //vignette.enabled.Override(true);
-                //vignette.intensity.value = 0.4f;
-                vignette.intensity.Override(0.6f);
-                /*
-                float alpha2 = 0.2f;
-                Color particleColor = bloodParticles.color;
-                particleColor.a = alpha2;
-                bloodParticles.color = particleColor;
-                */
-                break;
-            case float currentHealth when currentHealth > 3 && currentHealth < 6:
-                //vignette.enabled.Override(true);
-                vignette.intensity.Override(0.6f);
-                /*
-                float alpha1 = 1f;
-                particleColor = bloodParticles.color;
-                particleColor.a = alpha1;
-                bloodParticles.color = particleColor;
-                */
-                // heavy breathing audio? 
-                break;
-            case float currentHealth when currentHealth <= 0:
-                //vignette.enabled.Override(false);
-                StopCoroutine(HandleRegenerateHealth());
-                StartCoroutine(gameController.HandlePlayerDeath());
-                break;
-        }
-        yield return new WaitForSeconds(2);
-        StartCoroutine(HandleRegenerateHealth());
+    IEnumerator RegenerateHealth() {
+        isRegenerating = true;
+        yield return new WaitForSeconds(2f);
         canTakeDamage = true;
-    }
 
-    void HandleBleedEffect() {
-        if(bleedingUI.activeInHierarchy && Time.time - lastDamageTime > 3f) {
-            while (bloodParticles.color.a > 0) {
-                bloodParticles.color = new Color(bloodParticles.color.r, bloodParticles.color.g, bloodParticles.color.b, bloodParticles.color.a - (Time.deltaTime / 6));
-                if(!canTakeDamage) {
-                    break;
-                }
-            }
-            if(canTakeDamage) {
-                bleedingUI.SetActive(false);
-            }
-        }
-    }
-    IEnumerator HandleRegenerateHealth() {
-        while(currentHealth < maxHealth) {
-            if(!canTakeDamage) {
-                break;
-            }
+        while(currentHealth < maxHealth && currentHealth > 0f) {
             currentHealth += 1 * Time.deltaTime;
+            Debug.Log("hp: " + currentHealth);
+
             if(currentHealth >= maxHealth) {
                 currentHealth = maxHealth;
+                isRegenerating = false; 
+                yield break;
             }
-            yield return new WaitForSeconds(0.5f);
+
+            UpdatePostProcessingEffects();
+            HandleLowHealthEffects();
+            yield return null;
         }
     }
 
-    void HandleMovementSFX() {
-        if(!controller.isGrounded || !isMoving) {
-            footstepAudioSource.Stop();
-            return;
-        }
+    void UpdatePostProcessingEffects() {
+        float hp = currentHealth / maxHealth;
+        float effectStrength = 1f - hp;
 
-        footstepTimer -= Time.deltaTime; // Play one footstep per second? what is this
+        vignette.intensity.value = Mathf.Lerp(0f, maxVignetteIntensity, effectStrength);
+        colorAdjustments.saturation.value = Mathf.Lerp(0f, maxSaturation, effectStrength);
 
-        if(footstepTimer <= 0) {
-            if(Physics.Raycast(transform.position, Vector3.down, out RaycastHit hit, 4)) {
-                if(hit.collider.tag == "Tile") {
-                    //Debug.Log("tile");
-                    footstepAudioSource.PlayOneShot(concreteClips[Random.Range(0, concreteClips.Length - 1)]);
-                } else {
-                    /*
-                    switch(terrainDataIndex) {
-                        case 0:
-                            footstepAudioSource.PlayOneShot(concreteClips[Random.Range(0, concreteClips.Length - 1)]);
-                            break;
-                        case 1:
-                            footstepAudioSource.PlayOneShot(dirtClips[Random.Range(0, dirtClips.Length - 1)]);
-                            break;
-                        case 5:
-                            footstepAudioSource.PlayOneShot(grassClips[Random.Range(0, grassClips.Length - 1)]);
-                            break;
-                    }
-                    */
-                }
+        Color newColor = bloodUI.color;
+        newColor.a = Mathf.Lerp(0f, 1f, effectStrength);
+        bloodUI.color = newColor;
+    }
+
+    void HandleLowHealthEffects() {
+        if (currentHealth < 1.5f) {
+            if (!heartbeatAudio.isPlaying) {
+                heartbeatAudio.volume = 0.8f;
+                heartbeatAudio.Play();
             }
 
-            footstepTimer = GetCurrentOffset;
+            if (!bloodUI.enabled) {
+                bloodUI.enabled = true;
+            }
         }
+        else {
+            if (heartbeatAudio.isPlaying) {
+                StartCoroutine(FadeHeartbeatOut());
+            }
+        }
+    }
 
+
+
+
+    IEnumerator FadeHeartbeatOut() {
+        while(heartbeatAudio.volume > 0f) {
+            heartbeatAudio.volume -= 0.5f * Time.deltaTime;
+            yield return null;
+        }
+        heartbeatAudio.Stop();
+    }
+
+    public IEnumerator HandleDrinkEffect() {
+        switch(gameController.chosenDrinkIndex) {
+            case 0:
+                sprintSpeed += 15;
+                yield return new WaitForSeconds(10f);
+                sprintSpeed -= 15;
+                break;
+            case 1:
+                maxStamina = 9999f;
+                currentStamina = maxStamina;
+                yield return new WaitForSeconds(20f);
+                maxStamina = 15f;
+                currentStamina = maxStamina;
+                break;
+            case 2:
+                sprintSpeed += 5;
+                yield return new WaitForSeconds(15f);
+                sprintSpeed -= 5;
+                break;
+        }
+        yield return null;
     }
 
     public void DisablePlayerMovement(bool disableMovement, bool showCursor) {
@@ -274,8 +257,11 @@ public class FirstPersonController : MonoBehaviour
         
     }
 
+    public void EnableCollider(bool choice) {
+        controller.detectCollisions = choice;
+    }
+
     public void RotateTowardsSpeaker(GameObject target) {
-        Debug.Log("test");
         Vector3 direction = target.transform.position - tf.position;
         Quaternion rotation = Quaternion.LookRotation(direction);
         tf.rotation = Quaternion.Slerp(tf.rotation, rotation, Time.deltaTime * 15f);

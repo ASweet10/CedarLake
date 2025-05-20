@@ -18,7 +18,7 @@ public class DialogueManager : MonoBehaviour
     [SerializeField] Button option1Button;
     [SerializeField] Button option2Button;
     [SerializeField] Button option3Button;
-
+    [SerializeField] Image[] buttonHoverImages;
     List<dialogueString> dialogueList;
 
 
@@ -28,7 +28,7 @@ public class DialogueManager : MonoBehaviour
 
     int currentDialogueIndex = 0;
     bool optionSelected = false;
-    float typingSpeed = 0.04f;
+    float typingSpeed = 0.03f;
     [SerializeField] AudioSource dialogueClickAudio;
 
     void Start() {
@@ -92,29 +92,46 @@ public class DialogueManager : MonoBehaviour
 
             if (line.isQuestion) {
                 yield return StartCoroutine(TypeText(line.text));
+                Debug.Log("num answers" + line.numberOfAnswers.ToString());
+                switch(line.numberOfAnswers) {
+                    case 1:
+                        option1Button.interactable = true;
+                        option1Button.GetComponent<DialogueButtonHover>().enabled = true;
 
-                // check number of answers? (put in array instead of 3 strings)
-                // Only one box appears / is interactable if only one answer etc.
-                option1Button.interactable = true;
-                option2Button.interactable = true;
-                option3Button.interactable = true;
+                        option1Button.GetComponentInChildren<TMP_Text>().text = line.answerOption1;
+                        option1Button.onClick.AddListener(() => HandleOptionSelected(line.option1IndexJump));
+                        break;
+                    case 2:
+                        option1Button.interactable = true;
+                        option2Button.interactable = true;
+                        option1Button.GetComponent<DialogueButtonHover>().enabled = true;
+                        option2Button.GetComponent<DialogueButtonHover>().enabled = true;
 
-                /*
-                option1Button.GetComponentInChildren<DialogueButtonHover>().enabled = true;
-                option2Button.GetComponentInChildren<DialogueButtonHover>().enabled = true;
-                option3Button.GetComponentInChildren<DialogueButtonHover>().enabled = true;
-                */
+                        option1Button.GetComponentInChildren<TMP_Text>().text = line.answerOption1;
+                        option2Button.GetComponentInChildren<TMP_Text>().text = line.answerOption2;
+                        option1Button.onClick.AddListener(() => HandleOptionSelected(line.option1IndexJump));
+                        option2Button.onClick.AddListener(() => HandleOptionSelected(line.option2IndexJump));
+                        break;
+                    case 3:
+                        option1Button.interactable = true;
+                        option2Button.interactable = true;
+                        option3Button.interactable = true;
+                        option1Button.GetComponent<DialogueButtonHover>().enabled = true;
+                        option2Button.GetComponent<DialogueButtonHover>().enabled = true;
+                        option3Button.GetComponent<DialogueButtonHover>().enabled = true;
 
-                option1Button.GetComponentInChildren<TMP_Text>().text = line.answerOption1;
-                option2Button.GetComponentInChildren<TMP_Text>().text = line.answerOption2;
-                option3Button.GetComponentInChildren<TMP_Text>().text = line.answerOption3;
-
-                option1Button.onClick.AddListener(() => HandleOptionSelected(line.option1IndexJump));
-                option2Button.onClick.AddListener(() => HandleOptionSelected(line.option2IndexJump));
-                option3Button.onClick.AddListener(() => HandleOptionSelected(line.option3IndexJump));
+                        option1Button.GetComponentInChildren<TMP_Text>().text = line.answerOption1;
+                        option2Button.GetComponentInChildren<TMP_Text>().text = line.answerOption2;
+                        option3Button.GetComponentInChildren<TMP_Text>().text = line.answerOption3;
+                        option1Button.onClick.AddListener(() => HandleOptionSelected(line.option1IndexJump));
+                        option2Button.onClick.AddListener(() => HandleOptionSelected(line.option2IndexJump));
+                        option3Button.onClick.AddListener(() => HandleOptionSelected(line.option3IndexJump));
+                        break;
+                    default:
+                        break;
+                }
 
                 yield return new WaitUntil(() => optionSelected);
-            
             } else {
                 yield return StartCoroutine(TypeText(line.text));
             }
@@ -155,11 +172,15 @@ public class DialogueManager : MonoBehaviour
         option2Button.GetComponentInChildren<TMP_Text>().text = "";
         option3Button.GetComponentInChildren<TMP_Text>().text = "";
 
-        /*
-        option1Button.GetComponentInChildren<DialogueButtonHover>().enabled = false;
-        option2Button.GetComponentInChildren<DialogueButtonHover>().enabled = false;
-        option3Button.GetComponentInChildren<DialogueButtonHover>().enabled = false;
-        */
+        option1Button.GetComponent<DialogueButtonHover>().enabled = false;
+        option2Button.GetComponent<DialogueButtonHover>().enabled = false;
+        option3Button.GetComponent<DialogueButtonHover>().enabled = false;
+
+        foreach (Image img in buttonHoverImages) {
+            if(img != null) {
+                img.enabled = false;
+            }
+        }
     }
 
     public void DialogueStop() {
@@ -173,9 +194,12 @@ public class DialogueManager : MonoBehaviour
         Cursor.visible = false;
         StartCoroutine(HandleZoomIn(false));
         firstPersonController.DisablePlayerMovement(false, false);
+
+        var aiRef = GameObject.FindGameObjectWithTag(gameController.currentSpeaker).GetComponent<CharacterAI>();
+        aiRef.StateRef = aiRef.lastState;
     }
     IEnumerator HandleZoomIn(bool shouldZoomIn) {
-        float targetFOV = shouldZoomIn ? 50 : 60;
+        float targetFOV = shouldZoomIn ? 55 : 60;
         float startFOV = mainCamera.fieldOfView;
         float timeElapsed = 0;
 

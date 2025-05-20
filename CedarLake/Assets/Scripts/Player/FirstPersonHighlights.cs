@@ -56,12 +56,6 @@ public class FirstPersonHighlights : MonoBehaviour
                 fpController.DisablePlayerMovement(true, false);
                 interactables.ToggleMissingUI(hitObj.gameObject.name, true);
                 break;
-            case "Car Note":
-                interactables.ToggleMissingUI(hitObj.gameObject.name, true);
-                gameController.hasReadCarNote = true;
-                gameController.HandleNextObjective();
-                fpController.DisablePlayerMovement(true, false);
-                break;
             case "Drinks":
                 interactables.ToggleDrinksUI(true);
                 fpController.DisablePlayerMovement(true, true);
@@ -75,16 +69,16 @@ public class FirstPersonHighlights : MonoBehaviour
             case "My Car":
                 switch(gameController.currentObjective) {
                     case 2:
-                        // If checkpoint is "drive to park" after buying gas
-                        gameController.StartDriveToParkCutscene();
+                        gameController.StartDriveToParkCutscene(); // If checkpoint is "drive to park" after gas
                         break;
                     case 5:
-                        // If player introduced to danger and allowed to leave (ending 1)
-                        // Leave and go home? ui option
+                        gameController.OpenLeaveEarlyUI(); // If player can leave (ending 1), open UI option
                         break;
                     case 7:
-                        // If player tries to leave at night (tires slashed / can't use car)
-                        StartCoroutine(gameController.DisplayPopupMessage(tiresSlashedString));
+                        StartCoroutine(gameController.DisplayPopupMessage(tiresSlashedString)); // Player tries to leave at night (tires slashed)
+                        break;
+                    case 12:
+                        gameController.HandleEndGame(2); // Player leaves alone (ending 2)
                         break;
                     default:
                         StartCoroutine(gameController.DisplayPopupMessage(myCarString));
@@ -121,7 +115,7 @@ public class FirstPersonHighlights : MonoBehaviour
                 } else if (!gameController.hasZippo) {
                     StartCoroutine(gameController.DisplayPopupMessage(needsZippoString));
                 } else {
-                    StartCoroutine(gameController.StartCampFire());
+                    gameController.StartCampFire();
                 }
                 break;
             case "Build Campfire":
@@ -149,24 +143,28 @@ public class FirstPersonHighlights : MonoBehaviour
                 cashierTrigger.TriggerDialogue();
                 var cashierCharacter = hitObj.GetComponent<CharacterAI>();
                 cashierCharacter.RotateAndStartTalking();
+                gameController.currentSpeaker = "Cashier";
                 break;
             case "AJ":
                 var ajTrigger = hitObj.GetComponentInChildren<DialogueTrigger>();
                 ajTrigger.TriggerDialogue();
                 var ajCharacter = hitObj.GetComponent<CharacterAI>();
                 ajCharacter.RotateAndStartTalking();
+                gameController.currentSpeaker = "AJ";
                 break;
             case "David":
                 var davidTrigger = hitObj.GetComponentInChildren<DialogueTrigger>();
                 davidTrigger.TriggerDialogue();
                 var davidCharacter = hitObj.GetComponent<CharacterAI>();
                 davidCharacter.RotateAndStartTalking();
+                gameController.currentSpeaker = "David";
                 break;
             case "Hunter":
                 var hunterTrigger = hitObj.GetComponentInChildren<DialogueTrigger>();
                 hunterTrigger.TriggerDialogue();
                 var hunterCharacter = hitObj.GetComponent<CharacterAI>();
                 hunterCharacter.RotateAndStartTalking();
+                gameController.currentSpeaker = "Hunter";
                 break;
             default:
                 ClearHighlighted();

@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.AI;
 
@@ -11,36 +12,24 @@ public class KillerAI : MonoBehaviour
     FieldOfView fovScript;
     CharacterController controller;
     NavMeshAgent agent;
-    
-    
-    [Header("Footsteps")]
-    TerrainTexDetector terrainTexDetector;
-    AudioSource footstepAudioSource;
-    [SerializeField] AudioClip[] grassClips;
-    [SerializeField] AudioClip[] dirtClips;
-    float baseStepSpeed = 0.5f;
-    float sprintStepMultiplier = 0.6f;
-    float footstepTimer = 0;
-    float GetCurrentOffset => state == State.chasingPlayer ? baseStepSpeed * sprintStepMultiplier : baseStepSpeed;
-    public int terrainDataIndex;
-
-
-    [Header ("Patrol")]
     [SerializeField] Transform[] waypoints;
     int currentWaypoint = 0;
 
 
     [Header("Parameters")]
-    [SerializeField, Range(1, 5)] float walkSpeed = 2f;
-    [SerializeField, Range(5, 20)] float sprintSpeed = 10f;
+    [SerializeField] float walkSpeed = 5f;
+    [SerializeField] float sprintSpeed = 12f;
     [SerializeField] float attackRange = 3f;
     [SerializeField] float chaseRange = 15f;
     //[SerializeField] float hearingRange = 15f;
+    public Vector3 playerLastSeenPosition;
 
-    Transform playerLastSeenPosition; // Where did I last see player?; Lost LOS due to trees etc.; Investigate area
-
-    public enum State{ idle, patrolling, lookAroundAtWaypoint, chasingPlayer, attacking, searchingBushes, investigatingSound };
+    public enum State{ idle, patrolling, lookingAtWaypoint, chasingPlayer, attacking, searchingLastPosition };
     public State state = State.patrolling;
+    public State StateRef {
+        get { return state; }
+        set { state = value; }
+    }
 
     void Start () {
         agent = gameObject.GetComponent<NavMeshAgent>();
@@ -48,16 +37,12 @@ public class KillerAI : MonoBehaviour
         fovScript = gameObject.GetComponent<FieldOfView>();
         anim = gameObject.GetComponent<Animator>();
         tf = gameObject.GetComponent<Transform>();
-        terrainTexDetector = gameObject.GetComponent<TerrainTexDetector>();
-        footstepAudioSource = gameObject.GetComponent<AudioSource>();
         controller = gameObject.GetComponent<CharacterController>();
         currentWaypoint = 0;
     }
 
     void Update() {
         Debug.DrawLine(Vector3.zero, new Vector3(0, 5, 0), Color.cyan, 30f, false);
-
-        //terrainDataIndex = terrainTexDetector.GetActiveTerrainTextureIdx(tf.position);
         HandleAIBehavior();
     }
 
@@ -69,8 +54,8 @@ public class KillerAI : MonoBehaviour
             case State.patrolling:
                 HandlePatrol();
                 break;
-            case State.lookAroundAtWaypoint:
-                HandleLookAroundAtWaypoint();
+            case State.lookingAtWaypoint:
+                HandleLookAtWaypoint();
                 break;
             case State.chasingPlayer:
                 HandleChaseTarget();
@@ -78,8 +63,8 @@ public class KillerAI : MonoBehaviour
             case State.attacking:
                 HandleAttack();
                 break;
-            case State.investigatingSound:
-                HandleInvestigateSound();
+            case State.searchingLastPosition:
+                HandleSearchLastPosition();
                 break;
             default:
                 break;
@@ -105,6 +90,7 @@ public class KillerAI : MonoBehaviour
 
     void HandlePatrol() {
         if(fovScript.canSeePlayer) {
+            anim.SetBool("walking", false);
             state = State.chasingPlayer;
         }
 
@@ -123,9 +109,8 @@ public class KillerAI : MonoBehaviour
             }
             controller.Move(waypointPos * Time.deltaTime);
             */
-            agent.speed = 5f;
+            agent.speed = walkSpeed;
             agent.SetDestination(waypoints[currentWaypoint].position);
-            HandleKillerWalkSFX();
         } else {
             if(currentWaypoint == waypoints.Length - 1) {
                 currentWaypoint = 0;
@@ -133,14 +118,17 @@ public class KillerAI : MonoBehaviour
                 currentWaypoint ++;
             }
             anim.SetBool("walking", false);
-            state = State.lookAroundAtWaypoint;
+            state = State.lookingAtWaypoint;
         }
     }
     
     void HandleChaseTarget() {
-        if(Vector3.Distance(tf.position, playerTF.position) <= chaseRange) {
+        playerLastSeenPosition = playerTF.position;
+
+        if(Vector3.Distance(tf.position, playerTF.position) < chaseRange) {
             //tf.LookAt(playerTF);
             //tf.localEulerAngles = new Vector3(0f, tf.localEulerAngles.y, tf.localEulerAngles.z);
+            anim.SetBool("walking", false);
             anim.SetBool("chasing", true);
 
             /*
@@ -154,7 +142,7 @@ public class KillerAI : MonoBehaviour
             }
             */
             //controller.Move(currentMovement * Time.deltaTime);
-            agent.speed = 13f;
+            agent.speed = sprintSpeed;
             agent.SetDestination(playerTF.position);
 
             if(Vector3.Distance(tf.position, playerTF.position) <= attackRange) {
@@ -164,7 +152,7 @@ public class KillerAI : MonoBehaviour
 
         } else {
             anim.SetBool("chasing", false);
-            state = State.patrolling;
+            state = State.searchingLastPosition;
         }
     }
 
@@ -173,44 +161,52 @@ public class KillerAI : MonoBehaviour
             tf.LookAt(playerTF);
             tf.localEulerAngles = new Vector3(0f, tf.localEulerAngles.y, tf.localEulerAngles.z);
             anim.SetBool("attacking", true);
-
         } else {
             anim.SetBool("attacking", false);
             state = State.chasingPlayer;
         }
     }
-
-    void HandleKillerWalkSFX() {
-        if(!controller.isGrounded) {
-            footstepAudioSource.Stop();
-            return;
+    void HandleSearchLastPosition() {  // Where did I last see player?; Investigate area
+        if(fovScript.canSeePlayer) {
+            anim.SetBool("walking", false);
+            state = State.chasingPlayer;
         }
+        
+        agent.speed = walkSpeed;
+        anim.SetBool("walking", true);
 
-        footstepTimer -= Time.deltaTime; // Play one footstep per second? what is this
-
-        if(footstepTimer <= 0) {
-            if(Physics.Raycast(transform.position, Vector3.down, out RaycastHit hit, 4)) {
-                /*
-                    switch(terrainDataIndex) {
-                        case 1:
-                            footstepAudioSource.PlayOneShot(dirtClips[Random.Range(0, dirtClips.Length - 1)]);
-                            break;
-                        case 5:
-                            footstepAudioSource.PlayOneShot(grassClips[Random.Range(0, grassClips.Length - 1)]);
-                            break;
-                        default:
-                            break;
-                    }
-                */
-            }
-            footstepTimer = GetCurrentOffset;
+        if(Vector3.Distance(tf.position, playerLastSeenPosition) > 2) {
+            agent.SetDestination(playerLastSeenPosition);
+            Debug.Log("moving to lastpos");
+        } else {
+            Vector3 searchPosition = new Vector3(playerLastSeenPosition.x + 3, playerLastSeenPosition.y - 3, playerLastSeenPosition.z + 3);
+            StartCoroutine(InvestigateLastPosition(searchPosition));
+        }
+    }
+    
+    public void DisableFOV(bool choice) {
+        if (choice) {
+            fovScript.enabled = false;
+        } else {
+            fovScript.enabled = true;
         }
     }
 
-    void HandleInvestigateSound() {
-        // if killer hears something while patrolling or searching
+    IEnumerator InvestigateLastPosition(Vector3 searchPos) {
+        if(Vector3.Distance(tf.position, searchPos) > 1) {
+            agent.SetDestination(searchPos);
+            Debug.Log("moving to searchpos");
+        } else {
+            transform.rotation = Quaternion.Slerp(tf.rotation, Quaternion.Euler(0, 90, 0), 5f * Time.deltaTime);
+        }
+        yield return new WaitForSeconds(1f);
+        anim.SetBool("walking", false);
+        state = State.patrolling;
+
+        yield break;
     }
-    void HandleLookAroundAtWaypoint() {
+
+    void HandleLookAtWaypoint() {
         if(fovScript.canSeePlayer) {
             anim.SetBool("idle", false);
             state = State.chasingPlayer;
