@@ -34,7 +34,7 @@ public class Interactables : MonoBehaviour
     [SerializeField] AudioSource gasStationBellAudio;
     [SerializeField] Transform gasStationSpawnpoint;
     [SerializeField] Transform gasStationParkingLotSpawnpoint;
-    bool playerInGasStation = false;
+    bool playerInGasStation;
 
 
     [Header ("Drinks")]

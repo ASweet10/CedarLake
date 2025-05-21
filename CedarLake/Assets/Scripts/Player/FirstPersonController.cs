@@ -122,7 +122,7 @@ public class FirstPersonController : MonoBehaviour
             }
             HandleHeadbobEffect();
             HandleStamina();
-            //movementSFX.HandleMovementSFX();
+            movementSFX.HandleMovementSFX();
             ApplyFinalMovement();
 
         }
@@ -131,7 +131,7 @@ public class FirstPersonController : MonoBehaviour
     public void HandleTakeDamage() {
         if(canTakeDamage) {
             canTakeDamage = false;
-            currentHealth -= 1;
+            currentHealth -= 1.5f;
             damageAudio.Play();
 
             UpdatePostProcessingEffects();
@@ -154,7 +154,7 @@ public class FirstPersonController : MonoBehaviour
         canTakeDamage = true;
 
         while(currentHealth < maxHealth && currentHealth > 0f) {
-            currentHealth += 1 * Time.deltaTime;
+            currentHealth += 0.1f * Time.deltaTime;
             Debug.Log("hp: " + currentHealth);
 
             if(currentHealth >= maxHealth) {

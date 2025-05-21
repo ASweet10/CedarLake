@@ -30,6 +30,8 @@ public class KillerAI : MonoBehaviour
         get { return state; }
         set { state = value; }
     }
+    bool isAttacking;
+    float attackTimer = 0f;
 
     void Start () {
         agent = gameObject.GetComponent<NavMeshAgent>();
@@ -39,6 +41,7 @@ public class KillerAI : MonoBehaviour
         tf = gameObject.GetComponent<Transform>();
         controller = gameObject.GetComponent<CharacterController>();
         currentWaypoint = 0;
+        isAttacking = true;
     }
 
     void Update() {
@@ -157,14 +160,34 @@ public class KillerAI : MonoBehaviour
     }
 
     void HandleAttack() {
-        if(Vector3.Distance(tf.position, playerTF.position) <= attackRange) {
-            tf.LookAt(playerTF);
-            tf.localEulerAngles = new Vector3(0f, tf.localEulerAngles.y, tf.localEulerAngles.z);
-            anim.SetBool("attacking", true);
+        float distance = Vector3.Distance(tf.position, playerTF.position);
+
+        if(isAttacking) {
+            attackTimer -= Time.deltaTime;
+
+            if (attackTimer <= 0f) {
+                isAttacking = false;
+                anim.SetBool("attacking", false);
+                state = State.chasingPlayer;
+            }
+
         } else {
-            anim.SetBool("attacking", false);
-            state = State.chasingPlayer;
+            if (distance <= attackRange) {
+                isAttacking = true;
+                attackTimer = 2f;
+                tf.LookAt(playerTF);
+                tf.localEulerAngles = new Vector3(0f, tf.localEulerAngles.y, tf.localEulerAngles.z);
+                anim.SetBool("attacking", true);
+            } else {
+                anim.SetBool("attacking", false);
+                state = State.chasingPlayer;
+            }
+
         }
+    }
+    IEnumerator AttackAndWait() {
+
+        yield return new WaitForSeconds(2f);
     }
     void HandleSearchLastPosition() {  // Where did I last see player?; Investigate area
         if(fovScript.canSeePlayer) {

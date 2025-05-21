@@ -9,6 +9,6 @@ public class CreditAnimation : MonoBehaviour
         gameController = GameObject.FindGameObjectWithTag("GameController").GetComponent<GameController>();
     }
     public void FinishCreditScroll() {
-        gameController.ReturnToMainMenu();
+        gameController.ConfirmMainMenu();
     }
 }

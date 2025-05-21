@@ -5,6 +5,7 @@ using TMPro;
 using System.Collections.Generic;
 using UnityEngine.Rendering; 
 using UnityEngine.Rendering.Universal;
+using System.Xml.Serialization;
 
 public class GameController : MonoBehaviour
 {
@@ -12,6 +13,7 @@ public class GameController : MonoBehaviour
     [SerializeField] GameObject pauseMenuUI;
     [SerializeField] GameObject quitGameOptionUI;
     [SerializeField] GameObject leaveEarlyUI;
+    [SerializeField] GameObject mainMenuChoiceUI;
     [SerializeField] Interactables interactables;
     [SerializeField] SceneController sceneController;
 
@@ -334,24 +336,23 @@ public class GameController : MonoBehaviour
     }
 
     /**** Menus ****/
-    public void OpenLeaveEarlyUI() {
-        leaveEarlyUI.SetActive(true);
-    }
-    public void DeclineLeaveEarly() {
-        leaveEarlyUI.SetActive(false);
+    public void ToggleLeaveEarlyUI(bool choice) {
+        leaveEarlyUI.SetActive(choice);
     }
     public void ConfirmLeaveEarly() {
         HandleEndGame(1);
     }
-    public void OpenQuitGameUI()
-    {
-        quitGameOptionUI.SetActive(true);
-    }
-    public void DeclineQuitGame() {
-        quitGameOptionUI.SetActive(false);
+    public void ToggleQuitGameUI(bool choice) {
+        quitGameOptionUI.SetActive(choice);
     }
     public void ConfirmQuitGame() {
         Application.Quit();
+    }
+    public void ToggleMainMenuChoice(bool choice) {
+        mainMenuChoiceUI.SetActive(choice);
+    }
+    public void ConfirmMainMenu() {
+        SceneManager.LoadScene(0);
     }
 
     public void ToggleOptionsMenu(bool toggle) {
@@ -361,9 +362,6 @@ public class GameController : MonoBehaviour
     public void PlayGameButton() {
         StartCoroutine(sceneController.PanCameraOnPlay());
         //StartCoroutine(sceneController.FadeOut(2, 1));
-    }
-    public void ReturnToMainMenu() {
-        SceneManager.LoadScene(0);
     }
 
     public void ResumeGame() {

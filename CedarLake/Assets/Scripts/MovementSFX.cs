@@ -15,12 +15,12 @@ public class MovementSFX : MonoBehaviour
     [SerializeField] AudioClip[] grassClips;
     [SerializeField] AudioClip[] concreteClips;
     [SerializeField] AudioClip[] dirtClips;
-    float baseStepSpeed = 0.5f;
+    float playerStepSpeed = 0.95f;
+    float aiStepSpeed = 0.55f;
     float crouchStepMultiplier = 1.5f;
-    float sprintStepMultiplier = 0.6f;
+    float sprintStepMultiplier = 0.7f;
     float footstepTimer = 0;
-    float getCurrentOffset;
-    public int terrainDataIndex;
+    float currentOffset;
     public enum CharacterType { Player, Character, Killer };
     [SerializeField] CharacterType characterType;
 
@@ -41,18 +41,21 @@ public class MovementSFX : MonoBehaviour
         }
     }
     void Update() {
-        DetermineOffset();
-        terrainDataIndex = terrainTexDetector.GetActiveTerrainTextureIdx(tf.position);
         HandleMovementSFX();
     }
+
 
     public void HandleMovementSFX() {
         footstepTimer -= Time.deltaTime; // Play one footstep per second? what is this
 
+        //terrainDataIndex = terrainTexDetector.GetActiveTerrainTextureIdx(tf.position);
+        int terrainDataIndex = terrainTexDetector.GetActiveTexture(tf.position);
+        
         if(footstepTimer <= 0) {
             if(Physics.Raycast(transform.position, Vector3.down, out RaycastHit hit, 4)) {
                 if(hit.collider.tag == "Tile") {
                     footstepAudioSource.PlayOneShot(concreteClips[Random.Range(0, concreteClips.Length - 1)]);
+                    Debug.Log("tile");
                 } else {
                     switch(terrainDataIndex) {
                         case 0:
@@ -67,34 +70,31 @@ public class MovementSFX : MonoBehaviour
                     }
                 }
             }
-            footstepTimer = getCurrentOffset;
+            footstepTimer = DetermineOffset();
         }
     }
 
-    public void StopSFX() {
-        footstepAudioSource.Stop();
-    }
-
-    void DetermineOffset() {
+    float DetermineOffset() {
         if (characterType == CharacterType.Player) {
             if(!fpController.isMoving) {
-                StopSFX();
-                return;
+                footstepAudioSource.Stop();
             } else {
-                getCurrentOffset = fpController.isCrouching ? baseStepSpeed * crouchStepMultiplier : fpController.isSprinting ? baseStepSpeed * sprintStepMultiplier : baseStepSpeed;
+                currentOffset = fpController.isCrouching ? playerStepSpeed * crouchStepMultiplier : fpController.isSprinting ? playerStepSpeed * sprintStepMultiplier : playerStepSpeed;
             }
         } else if (characterType == CharacterType.Character) {
             if(agent.velocity.magnitude == 0) {
-                StopSFX();
+                footstepAudioSource.Stop();
             } else {
-                getCurrentOffset = characterAI.StateRef == CharacterAI.State.followingPlayer ? baseStepSpeed * sprintStepMultiplier : baseStepSpeed;
+                currentOffset = characterAI.StateRef == CharacterAI.State.followingPlayer ? aiStepSpeed * sprintStepMultiplier : aiStepSpeed;
             }
         } else if (characterType == CharacterType.Killer) {
             if(agent.velocity.magnitude == 0) {
-                StopSFX();
+                footstepAudioSource.Stop();
             } else {
-                getCurrentOffset = killerAI.StateRef == KillerAI.State.chasingPlayer ? baseStepSpeed * sprintStepMultiplier : baseStepSpeed;
+                currentOffset = killerAI.StateRef == KillerAI.State.chasingPlayer ? aiStepSpeed * sprintStepMultiplier : aiStepSpeed;
             }
         }
+
+        return currentOffset;
     }
 }

@@ -72,13 +72,16 @@ public class FirstPersonHighlights : MonoBehaviour
                         gameController.StartDriveToParkCutscene(); // If checkpoint is "drive to park" after gas
                         break;
                     case 5:
-                        gameController.OpenLeaveEarlyUI(); // If player can leave (ending 1), open UI option
+                        gameController.ToggleLeaveEarlyUI(true); // If player can leave (ending 1), open UI option
                         break;
                     case 7:
                         StartCoroutine(gameController.DisplayPopupMessage(tiresSlashedString)); // Player tries to leave at night (tires slashed)
                         break;
                     case 12:
                         gameController.HandleEndGame(2); // Player leaves alone (ending 2)
+                        break;
+                    case 13:
+                        gameController.HandleEndGame(3); // Player leaves with friend nearby (ending 3)
                         break;
                     default:
                         StartCoroutine(gameController.DisplayPopupMessage(myCarString));
