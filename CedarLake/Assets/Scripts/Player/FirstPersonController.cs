@@ -1,8 +1,5 @@
 using System.Collections;
 using UnityEngine;
-using UnityEngine.Rendering.Universal;
-using UnityEngine.Rendering;
-using UnityEngine.UI;
 
 public class FirstPersonController : MonoBehaviour
 {
@@ -16,54 +13,22 @@ public class FirstPersonController : MonoBehaviour
     FirstPersonHighlights fpHighlights;
 
     bool shouldCrouch => !duringCrouchAnimation && controller.isGrounded && Input.GetKeyDown(KeyCode.C);
-    bool IsSliding { 
-        get {
-            if(controller.isGrounded && Physics.Raycast(tf.position, Vector3.down, out RaycastHit slopeHit, 2f)) {
-                hitPointNormal = slopeHit.normal;
-                return Vector3.Angle(hitPointNormal, Vector3.up) > controller.slopeLimit;
-            } else {
-                return false;
-            }
-        }
-    }
+
 
     [Header("Movement")]
     [SerializeField] float walkSpeed = 10f;
     [SerializeField] float sprintSpeed = 20f;
+    [SerializeField] float maxStamina = 15f; // [SerializeField, Range(1, 20)]
+    [SerializeField] AudioSource windedAudio;
     KeyCode sprintKey = KeyCode.LeftShift;
     Vector2 currentInput;
     Vector3 currentMovement;
     public bool isSprinting => canSprint && Input.GetKey(sprintKey);
     public bool isMoving => Input.GetAxis("Horizontal") != 0 || Input.GetAxis("Vertical") != 0;
-
-
-    [Header("Health")]
-    [SerializeField] AudioSource damageAudio;
-    [SerializeField] AudioSource heartbeatAudio;
-    [SerializeField] RawImage bloodUI;
-    [SerializeField] GameObject redBG;
-    [SerializeField] Volume volume;
-    Vignette vignette;
-    ColorAdjustments colorAdjustments;
-    float maxHealth = 3;
-    float currentHealth;
-    [SerializeField] float maxVignetteIntensity = 0.7f;
-    [SerializeField] float maxSaturation = 75f;
-    bool canTakeDamage = true;
-    bool isRegenerating = false;
-
-
-
-    [Header("Stamina")]
-    [SerializeField] float maxStamina = 15f; // [SerializeField, Range(1, 20)]
-    [SerializeField] AudioSource windedAudio;
     float currentStamina;
     bool canSprint = true;
 
 
-    // Sliding
-    Vector3 hitPointNormal; // Angle of floor
-    float slopeSpeed = 8f;
 
 
     [Header("Crouch")]
@@ -99,128 +64,57 @@ public class FirstPersonController : MonoBehaviour
         gameController = GameObject.FindGameObjectWithTag("GameController").GetComponent<GameController>();
         defaultYPosition = mainCamera.transform.localPosition.y; // Return camera to default position when not moving
         tf = gameObject.GetComponent<Transform>();
-
-        volume = GameObject.FindGameObjectWithTag("GameController").GetComponent<Volume>();
-        volume.profile.TryGet(out vignette);
-        volume.profile.TryGet(out colorAdjustments);
     }
 
     void Start() {  
         DisablePlayerMovement(false, false);
         currentStamina = maxStamina;
-        currentHealth = maxHealth;
     }
-    
-    void Update() {
-        if(Input.GetKeyDown(KeyCode.Alpha4)) {
-            HandleTakeDamage();
-        }
-        if(canMove) {
+
+    void Update()
+    {
+        if (canMove)
+        {
             HandleMovementInput();
-            if(canCrouch) { 
-                AttemptToCrouch(); 
+            if (canCrouch)
+            {
+                AttemptToCrouch();
             }
             HandleHeadbobEffect();
             HandleStamina();
             movementSFX.HandleMovementSFX();
             ApplyFinalMovement();
-
         }
-    }
 
-    public void HandleTakeDamage() {
-        if(canTakeDamage) {
-            canTakeDamage = false;
-            currentHealth -= 1.5f;
-            damageAudio.Play();
-
-            UpdatePostProcessingEffects();
-
-            if(currentHealth > 0) {
-                StartCoroutine(RegenerateHealth());
-            } else {
-                heartbeatAudio.Stop();
-                redBG.SetActive(false);
-                bloodUI.enabled = false;
-                StopCoroutine(RegenerateHealth());
-                gameController.HandlePlayerDeath();
-            }
+        if (Input.GetKeyDown(KeyCode.Alpha7))
+        {
+            gameController.chosenDrinkIndex = 0;
+            StartCoroutine(HandleDrinkEffect());
         }
-    }
-
-    IEnumerator RegenerateHealth() {
-        isRegenerating = true;
-        yield return new WaitForSeconds(2f);
-        canTakeDamage = true;
-
-        while(currentHealth < maxHealth && currentHealth > 0f) {
-            currentHealth += 0.1f * Time.deltaTime;
-            Debug.Log("hp: " + currentHealth);
-
-            if(currentHealth >= maxHealth) {
-                currentHealth = maxHealth;
-                isRegenerating = false; 
-                yield break;
-            }
-
-            UpdatePostProcessingEffects();
-            HandleLowHealthEffects();
-            yield return null;
+        if (Input.GetKeyDown(KeyCode.Alpha8))
+        {
+            gameController.chosenDrinkIndex = 1;
+            StartCoroutine(HandleDrinkEffect());
         }
-    }
-
-    void UpdatePostProcessingEffects() {
-        float hp = currentHealth / maxHealth;
-        float effectStrength = 1f - hp;
-
-        vignette.intensity.value = Mathf.Lerp(0f, maxVignetteIntensity, effectStrength);
-        colorAdjustments.saturation.value = Mathf.Lerp(0f, maxSaturation, effectStrength);
-
-        Color newColor = bloodUI.color;
-        newColor.a = Mathf.Lerp(0f, 1f, effectStrength);
-        bloodUI.color = newColor;
-    }
-
-    void HandleLowHealthEffects() {
-        if (currentHealth < 1.5f) {
-            if (!heartbeatAudio.isPlaying) {
-                heartbeatAudio.volume = 0.8f;
-                heartbeatAudio.Play();
-            }
-
-            if (!bloodUI.enabled) {
-                bloodUI.enabled = true;
-            }
-        }
-        else {
-            if (heartbeatAudio.isPlaying) {
-                StartCoroutine(FadeHeartbeatOut());
-            }
+        if (Input.GetKeyDown(KeyCode.Alpha9)) {
+            gameController.chosenDrinkIndex = 2;
+            StartCoroutine(HandleDrinkEffect());
         }
     }
 
 
-
-
-    IEnumerator FadeHeartbeatOut() {
-        while(heartbeatAudio.volume > 0f) {
-            heartbeatAudio.volume -= 0.5f * Time.deltaTime;
-            yield return null;
-        }
-        heartbeatAudio.Stop();
-    }
 
     public IEnumerator HandleDrinkEffect() {
         switch(gameController.chosenDrinkIndex) {
             case 0:
-                sprintSpeed += 15;
-                yield return new WaitForSeconds(10f);
-                sprintSpeed -= 15;
+                sprintSpeed += 10;
+                yield return new WaitForSeconds(8f);
+                sprintSpeed -= 10;
                 break;
             case 1:
                 maxStamina = 9999f;
                 currentStamina = maxStamina;
-                yield return new WaitForSeconds(20f);
+                yield return new WaitForSeconds(15f);
                 maxStamina = 15f;
                 currentStamina = maxStamina;
                 break;
@@ -240,11 +134,14 @@ public class FirstPersonController : MonoBehaviour
             mouseLook.CanRotateMouse = false;
             currentMovement = Vector3.zero;
             flashlight.ToggleFlashlightStatus(false);
-        } else {
+            movementSFX.enabled = false;
+        }
+        else {
             canMove = true;
             fpHighlights.CanInteract = true;
             mouseLook.CanRotateMouse = true;
             flashlight.ToggleFlashlightStatus(true);
+            movementSFX.enabled = true;
         }
         
         if(showCursor) {
@@ -261,11 +158,9 @@ public class FirstPersonController : MonoBehaviour
         controller.detectCollisions = choice;
     }
 
-    public void RotateTowardsSpeaker(GameObject target) {
-        Vector3 direction = target.transform.position - tf.position;
-        Quaternion rotation = Quaternion.LookRotation(direction);
-        tf.rotation = Quaternion.Slerp(tf.rotation, rotation, Time.deltaTime * 15f);
-        tf.localEulerAngles = new Vector3(0f, tf.localEulerAngles.y, 0);
+    public void RotateTowardsSpeaker(Transform target) {
+        Vector3 targetPosition = new Vector3(target.position.x, transform.position.y, target.position.z);
+        transform.LookAt(targetPosition);
     }
      public void AttemptToCrouch() {
         if(shouldCrouch) {
@@ -315,9 +210,12 @@ public class FirstPersonController : MonoBehaviour
                 currentMovement.y = 0;
             }
         }
-        if(IsSliding) {
+        /*
+        if (IsSliding)
+        {
             currentMovement += new Vector3(hitPointNormal.x, -hitPointNormal.y, hitPointNormal.z) * slopeSpeed;
         }
+        */
         controller.Move(currentMovement * Time.deltaTime);
     }
     
@@ -368,6 +266,20 @@ public class FirstPersonController : MonoBehaviour
     void HandleJump() {
         if(shouldJump) {
             currentMovement.y = jumpForce;
+        }
+    }
+    // Sliding
+    Vector3 hitPointNormal; // Angle of floor
+    float slopeSpeed = 8f;
+
+    bool IsSliding { 
+        get {
+            if(controller.isGrounded && Physics.Raycast(tf.position, Vector3.down, out RaycastHit slopeHit, 2f)) {
+                hitPointNormal = slopeHit.normal;
+                return Vector3.Angle(hitPointNormal, Vector3.up) > controller.slopeLimit;
+            } else {
+                return false;
+            }
         }
     }
     */

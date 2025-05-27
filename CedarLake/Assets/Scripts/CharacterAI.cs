@@ -15,7 +15,7 @@ public class CharacterAI : MonoBehaviour
     NavMeshAgent agent;
     Transform tf;
 
-    public enum State{ idle, walkingToWaypoint, talking, hiding, followingPlayer, dead };
+    public enum State{ idle, walkingToWaypoint, hiding, followingPlayer, dead };
     State state = State.idle;
     public State StateRef {
         get { return state; }
@@ -48,9 +48,6 @@ public class CharacterAI : MonoBehaviour
         switch (state) {
             case State.idle:
                 HandleIdle();
-                break;
-            case State.talking:
-                HandleTalking();
                 break;
             case State.walkingToWaypoint:
                 HandleWaypointNavigation();
@@ -95,7 +92,7 @@ public class CharacterAI : MonoBehaviour
         anim.SetBool("talking", true);
 
         lastState = state;
-        state = State.talking;
+        state = State.idle;
     }
 
     void HandleIdle() {
@@ -111,9 +108,6 @@ public class CharacterAI : MonoBehaviour
             }
         }
 
-    }
-    void HandleTalking() {
-        anim.SetBool("talking", true);
     }
     void HandleHideBehavior() {
         // find nearest bush you can hide in

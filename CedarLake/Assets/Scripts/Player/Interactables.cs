@@ -18,7 +18,7 @@ public class Interactables : MonoBehaviour
     GameObject player;
     SceneController sceneController;
 
-    [Header ("UI Objects")]
+    [Header("UI Objects")]
     [SerializeField] GameObject missingUI_Matthew;
     [SerializeField] GameObject missingUI_Couple;
     [SerializeField] GameObject missingUI_Nathan;
@@ -253,7 +253,6 @@ public class Interactables : MonoBehaviour
             } else {
                 if(gameController.gamePaused) {
                     gameController.ResumeGame();
-                    Debug.Log("resume");
                 }
                 else {
                     gameController.PauseGame();
@@ -290,8 +289,8 @@ public class Interactables : MonoBehaviour
             arcadeStartCamera.enabled = true;
             gameCamera.enabled = false;
             arcadeController.enabled = true;
-            firstPersonController.enabled = false;
-            mouseLook.enabled = false;
+            
+            fpController.DisablePlayerMovement(true, false);
             interactText.text = "";
 
             arcadeCoinSound.Play();
@@ -313,10 +312,9 @@ public class Interactables : MonoBehaviour
             gameCamera.enabled = true;
             arcadeStartCamera.enabled = false;
             arcadePlayerCamera.enabled = false;
-
             arcadeController.enabled = false;
-            firstPersonController.enabled = true;
-            mouseLook.enabled = true;
+
+            fpController.DisablePlayerMovement(false, false);
             arcadeCoinSound.Stop();
             arcadeCoinSound.clip = arcadeCoinSFX; // reset for next game
 

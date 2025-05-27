@@ -12,24 +12,13 @@ public class ArcadeWolf : MonoBehaviour
     [SerializeField] Transform arcadePlayer;
     Transform tf;
 
-
-    [Header("Obstacle Avoidance")]
-    [SerializeField] float obstacleCheckRadius;
-    [SerializeField] float obstacleCheckDistance;
     [SerializeField] LayerMask obstacleLayerMask;
-    RaycastHit2D[] obstacleCollisions;
-    Vector3 targetDirection;
-    Vector3 obstacleAvoidanceTargetDirection;
-    float obstacleAvoidanceCooldown;
-
+    float avoidDistance = 1.5f;
     float moveSpeed = 0.9f;
-    float rotationSpeed = 5f;
-    float distance;
     public bool CanMove { get; private set; }
 
     void Start() {
         tf = gameObject.GetComponent<Transform>();
-        obstacleCollisions = new RaycastHit2D[10];
         ResetWolfPosition();
         CanMove = true;
     }
@@ -45,16 +34,31 @@ public class ArcadeWolf : MonoBehaviour
         }
 
         if(CanMove) {
-            distance = Vector2.Distance(tf.position, arcadePlayer.position);
+            float distance = Vector2.Distance(tf.position, arcadePlayer.position);
             if(distance > 0.5f) {
-                Vector3 playerVector = arcadePlayer.position - tf.position;
-                targetDirection = playerVector.normalized; 
-                // Vector3 because vector2 didn't account for z-axis in 3d space; Sprite was floating off screen
-                //tf.position = Vector3.MoveTowards(tf.position, arcadePlayer.position, moveSpeed * Time.deltaTime);
-                tf.position = Vector3.MoveTowards(tf.position, targetDirection, moveSpeed * Time.deltaTime);
-                anim.SetBool("isWalking", true);
+                Vector3 direction = (arcadePlayer.position - tf.position).normalized;
 
-                HandleObstacles();
+                bool obstacleAhead = Physics.Raycast(tf.position, direction, avoidDistance, obstacleLayerMask);
+                Vector3 rightDirection = Quaternion.Euler(0, 45, 0) * direction;
+                Vector3 leftDirection = Quaternion.Euler(0, -45, 0) * direction;
+
+                bool obstacleRight = Physics.Raycast(tf.position, rightDirection, avoidDistance, obstacleLayerMask);
+                bool obstacleLeft = Physics.Raycast(tf.position, leftDirection, avoidDistance, obstacleLayerMask);
+
+                Vector3 moveDir = direction;
+
+                if (obstacleAhead) {
+                    if (!obstacleLeft)
+                        moveDir = leftDirection;
+                    else if (!obstacleRight)
+                        moveDir = rightDirection;
+                    else
+                        moveDir = -direction;
+                }
+
+                // Vector3 because vector2 didn't account for z-axis in 3d space; Sprite was floating off screen
+                tf.position = Vector3.MoveTowards(tf.position, tf.position + moveDir, moveSpeed * Time.deltaTime);
+                anim.SetBool("isWalking", true);
             } else {
                 arcadeController.HandleLoseArcadeLife();
                 anim.SetBool("isWalking", false);
@@ -62,36 +66,8 @@ public class ArcadeWolf : MonoBehaviour
         }
     }
 
-    void HandleObstacles () {
-
-        obstacleAvoidanceCooldown -= Time.deltaTime;
-
-        var contactFilter = new ContactFilter2D();
-        contactFilter.SetLayerMask(obstacleLayerMask);
-
-        int collisions = Physics2D.CircleCast(tf.position, obstacleCheckRadius, transform.up, contactFilter, obstacleCollisions, obstacleCheckDistance);
-
-        for (int i = 0; i < collisions; i++) {
-            var obstacleCollision = obstacleCollisions[i];
-
-            if (obstacleCollision.collider.gameObject == gameObject) {
-                continue;
-            }
-            if (obstacleAvoidanceCooldown <= 0) {
-                obstacleAvoidanceTargetDirection = obstacleCollision.normal;
-                obstacleAvoidanceCooldown = 0.5f;
-            }
-
-            var targetRotation = Quaternion.LookRotation(tf.forward, obstacleAvoidanceTargetDirection);
-            var rotation = Quaternion.RotateTowards(tf.rotation, targetRotation, rotationSpeed * Time.deltaTime);
-
-            //targetDirection = obstacleCollision.normal;
-            targetDirection = rotation * Vector2.up;
-            break;
-        }
-    }
-
-    public void SetCanMove(bool choice) {
+    public void SetCanMove(bool choice)
+    {
         CanMove = choice;
     }
     public void ResetWolfPosition() {

@@ -26,10 +26,10 @@ public class PauseMenuHover : MonoBehaviour, IPointerEnterHandler, IPointerExitH
                 if(gameController.hasDrink) {
                     switch(gameController.chosenDrinkIndex) {
                         case 0:
-                            pauseItemText.text = "Volt Energy [+15 sprint speed 10 sec]";
+                            pauseItemText.text = "Volt Energy [+10 sprint speed 8 sec]";
                             break;
                         case 1:
-                            pauseItemText.text = "Daily Grind [Unlimited stamina 20 sec]";
+                            pauseItemText.text = "Daily Grind [Unlimited stamina 15 sec]";
                             break;
                         case 2:
                             pauseItemText.text = "Noca Cola [+5 sprint speed 15 sec]";

@@ -14,7 +14,7 @@ public class StealTrigger : MonoBehaviour
             if(gameController.holdingGasStationItem) {
                 gameController.caughtStealing = true;
                 var playerController = other.GetComponent<FirstPersonController>();
-                playerController.RotateTowardsSpeaker(cashier);
+                playerController.RotateTowardsSpeaker(cashier.transform);
                 pickUpObjects.DropObject();
                 pickUpObjects.canDrop = false;
 
@@ -30,7 +30,7 @@ public class StealTrigger : MonoBehaviour
             if(gameController.holdingGasStationItem) {
                 gameController.caughtStealing = true;
                 var playerController = other.GetComponent<FirstPersonController>();
-                playerController.RotateTowardsSpeaker(cashier);
+                playerController.RotateTowardsSpeaker(cashier.transform);
                 pickUpObjects.DropObject();
                 pickUpObjects.canDrop = false;
 

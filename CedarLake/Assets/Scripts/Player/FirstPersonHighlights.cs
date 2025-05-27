@@ -78,10 +78,10 @@ public class FirstPersonHighlights : MonoBehaviour
                         StartCoroutine(gameController.DisplayPopupMessage(tiresSlashedString)); // Player tries to leave at night (tires slashed)
                         break;
                     case 12:
-                        gameController.HandleEndGame(2); // Player leaves alone (ending 2)
+                        StartCoroutine(gameController.HandleEndGame(2)); // Player leaves alone (ending 2)
                         break;
                     case 13:
-                        gameController.HandleEndGame(3); // Player leaves with friend nearby (ending 3)
+                        StartCoroutine(gameController.HandleEndGame(3)); // Player leaves with friend nearby (ending 3)
                         break;
                     default:
                         StartCoroutine(gameController.DisplayPopupMessage(myCarString));

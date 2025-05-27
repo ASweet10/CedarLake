@@ -9,7 +9,6 @@ public class DialogueManager : MonoBehaviour
     GameController gameController;
     FirstPersonController firstPersonController;
     FirstPersonHighlights fpHighlights;
-    MouseLook mouseLook;
 
     [SerializeField] GameObject dialogueParent;
     [SerializeField] GameObject playerCarRef;
@@ -36,7 +35,6 @@ public class DialogueManager : MonoBehaviour
         gameController = GameObject.FindGameObjectWithTag("GameController").GetComponent<GameController>();
         firstPersonController = GameObject.FindGameObjectWithTag("Player").GetComponent<FirstPersonController>();
         fpHighlights = GameObject.FindGameObjectWithTag("Player").GetComponent<FirstPersonHighlights>();
-        mouseLook = GameObject.FindGameObjectWithTag("MainCamera").GetComponent<MouseLook>();
     }
 
     public void PlayDialogueClickSFX() {
@@ -188,13 +186,9 @@ public class DialogueManager : MonoBehaviour
         dialogueText.text = "";
         dialogueParent.SetActive(false);
 
-        firstPersonController.enabled = true;
-        mouseLook.CanRotateMouse = true;
-        Cursor.lockState = CursorLockMode.Locked;
-        Cursor.visible = false;
         StartCoroutine(HandleZoomIn(false));
         firstPersonController.DisablePlayerMovement(false, false);
-
+        
         var aiRef = GameObject.FindGameObjectWithTag(gameController.currentSpeaker).GetComponent<CharacterAI>();
         aiRef.StateRef = aiRef.lastState;
     }

@@ -2,10 +2,8 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using TMPro;
-using System.Collections.Generic;
 using UnityEngine.Rendering; 
 using UnityEngine.Rendering.Universal;
-using System.Xml.Serialization;
 
 public class GameController : MonoBehaviour
 {
@@ -16,17 +14,16 @@ public class GameController : MonoBehaviour
     [SerializeField] GameObject mainMenuChoiceUI;
     [SerializeField] Interactables interactables;
     [SerializeField] SceneController sceneController;
-
+    [SerializeField] FirstPersonController fpController;
+    [SerializeField] KillerAI killerAI;
 
 
     [Header("Objectives")]
     [SerializeField] TMP_Text popupText;
     [SerializeField] TMP_Text objectivePopupText;
     [SerializeField] TMP_Text objectiveTextInPauseMenu;
-    [SerializeField] FirstPersonController fpController;
     [SerializeField] string[] gameObjectives;
     public int currentObjective = 4;
-
 
 
     public bool holdingGasStationItem = false;
@@ -52,7 +49,6 @@ public class GameController : MonoBehaviour
     [SerializeField] GameObject playerDeath3DObject;
     [SerializeField] AnimationClip[] playerDeathClips;
     [SerializeField] Animator playerDeathAnimator;
-    [SerializeField] GameObject bloodPool;
     [SerializeField] GameObject deathUI;
     [SerializeField] Transform[] restartPositions;
     [SerializeField] GameObject[] killers;
@@ -69,8 +65,10 @@ public class GameController : MonoBehaviour
 
     [Header("Endings")]
     [SerializeField] GameObject endingUI;
+    [SerializeField] GameObject threeAMUI;
     [SerializeField] TMP_Text endingHeader;
     [SerializeField] TMP_Text endingMessage;
+    [SerializeField] AudioSource endingCarAudio;
 
 
 
@@ -109,17 +107,13 @@ public class GameController : MonoBehaviour
     [SerializeField] GameObject playerTent;
     [SerializeField] GameObject axeInStump;
     Volume volume;
-    ColorAdjustments colorAdjustments;
-    Bloom bloom;
-    
+    ColorAdjustments colorAdjustments;    
 
     
     void Start() {
         fpHighlights = GameObject.FindGameObjectWithTag("Player").GetComponent<FirstPersonHighlights>();
         volume = gameObject.GetComponent<Volume>();
         volume.profile.TryGet(out colorAdjustments);
-        volume.profile.TryGet(out bloom);
-
 
         foreach(GameObject killer in killers) {
             KillerAI aiRef = killer.GetComponent<KillerAI>();
@@ -129,9 +123,7 @@ public class GameController : MonoBehaviour
         //currentCheckpoint = 0;
 
         if(SceneManager.GetActiveScene().buildIndex != 1) {  // If main menu / ending
-            Cursor.lockState = CursorLockMode.None;
-            //Cursor.SetCursor(arrowCursor, Vector2.zero, CursorMode.Auto);
-            Cursor.visible = true;
+            fpController.DisablePlayerMovement(true, true);
         }
         else {
             interactables.enabled = true;
@@ -262,9 +254,9 @@ public class GameController : MonoBehaviour
     }
 
     public IEnumerator TransitionToNighttime() {
-        //fade out
-        //short cutscene showing camp fire, fade out
-        yield return new WaitForSeconds(1f);
+        sceneController.FadeOut(3, 99);
+        yield return new WaitForSeconds(2.5f);
+        threeAMUI.SetActive(true);
         //display 3:02 am time
 
         tentObjects[0].SetActive(false); // disable tent flap (David)
@@ -276,7 +268,7 @@ public class GameController : MonoBehaviour
         colorAdjustments.hueShift.value = 2f;
         
         yield return new WaitForSeconds(2f);
-        //fade in
+        sceneController.FadeIn(3);
         //player can look around but not move, can interact with tent flap
         playerTent.tag = "Leave Tent";
     }
@@ -300,21 +292,23 @@ public class GameController : MonoBehaviour
 
     }
 
-    public void HandlePlayerDeath() {    
+    public void HandlePlayerDeath() {
         fpController.DisablePlayerMovement(true, true);
         fpController.EnableCollider(false);
         deathCamera.enabled = true;
         mainCamera.enabled = false;
         deathUI.SetActive(true);
-        playerDeath3DObject.SetActive(true);
 
+        playerDeath3DObject.SetActive(true);
         int deathClipIndex = Random.Range(0, playerDeathClips.Length - 1);
         playerDeathAnimator.SetInteger("deathClipIndex", deathClipIndex);
     }
 
-    public void HandleEndGame(int endingNumber) {
-        // fade out
-        // car starting sfx
+    public IEnumerator HandleEndGame(int endingNumber) {
+        sceneController.FadeOut(2, 99);
+        endingCarAudio.Play();
+        yield return new WaitForSeconds(2.5f);
+
         fpController.DisablePlayerMovement(true, true);
         fpController.EnableCollider(false);
         endingUI.SetActive(true);
@@ -340,7 +334,7 @@ public class GameController : MonoBehaviour
         leaveEarlyUI.SetActive(choice);
     }
     public void ConfirmLeaveEarly() {
-        HandleEndGame(1);
+        StartCoroutine(HandleEndGame(1));
     }
     public void ToggleQuitGameUI(bool choice) {
         quitGameOptionUI.SetActive(choice);
@@ -370,6 +364,7 @@ public class GameController : MonoBehaviour
         popupText.enabled = true;
         AudioListener.volume = 1f;
         fpController.DisablePlayerMovement(false, false);
+        killerAI.DisableKillerMovement(true);
     }
     public void PauseGame() {
         pauseMenuUI.SetActive(true);
@@ -378,5 +373,6 @@ public class GameController : MonoBehaviour
         objectiveTextInPauseMenu.text = gameObjectives[currentObjective];
         AudioListener.volume = 0.3f;
         fpController.DisablePlayerMovement(true, true);
+        killerAI.DisableKillerMovement(false);
     }
 }

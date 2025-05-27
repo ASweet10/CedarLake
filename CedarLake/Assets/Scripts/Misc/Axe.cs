@@ -3,14 +3,14 @@ using UnityEngine;
 
 public class Axe : MonoBehaviour
 {
-    FirstPersonController fpController;
+    FirstPersonHealth fpHealth;
     void Start() {
-        fpController = GameObject.FindGameObjectWithTag("Player").GetComponent<FirstPersonController>();
+        fpHealth = GameObject.FindGameObjectWithTag("Player").GetComponent<FirstPersonHealth>();
     }
 
     private void OnTriggerEnter(Collider other) {
         if(other.gameObject.tag == "Player") {
-            fpController.HandleTakeDamage();
+            fpHealth.HandleTakeDamage();
         }
     }
 }

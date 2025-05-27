@@ -100,13 +100,13 @@ public class ArcadeController : MonoBehaviour
         arcadeBloodScreen.SetActive(true);
         arcadeLight.enabled = false;
         
-        yield return new WaitForSeconds(1f);
+        yield return new WaitForSeconds(1.5f);
         arcadeBloodScreen.SetActive(false);
         arcadeBackground.SetActive(true);
         arcadeLight.enabled = true;
         deathScreen.SetActive(true);
 
-        yield return new WaitForSeconds(3f);
+        yield return new WaitForSeconds(3.5f);
         deathScreen.SetActive(false);
         startScreen.SetActive(true);
         
