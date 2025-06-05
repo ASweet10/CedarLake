@@ -3,23 +3,20 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using UnityEngine;
 
-public class ArcadeWolf : MonoBehaviour
-{
+public class ArcadeWolf : MonoBehaviour {
     [SerializeField] SpriteRenderer spriteRenderer;
     [SerializeField] ArcadeController arcadeController;
-    [SerializeField] Transform wolfStartPosition;
     [SerializeField] Animator anim;
     [SerializeField] Transform arcadePlayer;
     Transform tf;
 
     [SerializeField] LayerMask obstacleLayerMask;
     float avoidDistance = 1.5f;
-    float moveSpeed = 0.9f;
+    float moveSpeed = 0.8f;
     public bool CanMove { get; private set; }
 
     void Start() {
         tf = gameObject.GetComponent<Transform>();
-        ResetWolfPosition();
         CanMove = true;
     }
     void Update() {
@@ -27,15 +24,15 @@ public class ArcadeWolf : MonoBehaviour
     }
 
     void HandleWolfAIBehavior() {
-        if(arcadePlayer.position.x < tf.position.x) {
+        if (arcadePlayer.position.x < tf.position.x) {
             spriteRenderer.flipX = true;
         } else {
             spriteRenderer.flipX = false;
         }
 
-        if(CanMove) {
+        if (CanMove) {
             float distance = Vector2.Distance(tf.position, arcadePlayer.position);
-            if(distance > 0.5f) {
+            if (distance > 0.5f) {
                 Vector3 direction = (arcadePlayer.position - tf.position).normalized;
 
                 bool obstacleAhead = Physics.Raycast(tf.position, direction, avoidDistance, obstacleLayerMask);
@@ -60,17 +57,13 @@ public class ArcadeWolf : MonoBehaviour
                 tf.position = Vector3.MoveTowards(tf.position, tf.position + moveDir, moveSpeed * Time.deltaTime);
                 anim.SetBool("isWalking", true);
             } else {
-                arcadeController.HandleLoseArcadeLife();
+                arcadeController.HandleArcadeGameOver();
                 anim.SetBool("isWalking", false);
             }
         }
     }
 
-    public void SetCanMove(bool choice)
-    {
+    public void SetCanMove(bool choice) {
         CanMove = choice;
-    }
-    public void ResetWolfPosition() {
-        transform.position = wolfStartPosition.position;
-    }
+    }    
 }

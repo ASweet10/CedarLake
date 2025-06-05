@@ -1,6 +1,3 @@
-using System.Collections;
-using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -13,25 +10,23 @@ public class FirstPersonHighlights : MonoBehaviour
     Cutscenes cutscenes;
     [SerializeField] PickUpObjects pickupObjects;
     FirstPersonController fpController;
+    [SerializeField] ArcadeController arcadeController;
 
     [SerializeField] Camera mainCamera;
     public bool CanInteract;
     
     [Header("Highlights")]
     GameObject lastHighlightedObject;
-    [SerializeField] Sprite normalCursor;
-    [SerializeField] Sprite handCursor;
     [SerializeField] Image cursorImage;
     [SerializeField] TMP_Text interactText; // Text displayed on hover
 
     [Header("Interact Texts")]
-    [SerializeField] string trashString = "It smells awful...";
-    [SerializeField] string myCarString = "My car. An old piece of shit but it's reliable";
-    [SerializeField] string tiresSlashedString = "Someone totaled my car! What am I gonna do?";
+    [SerializeField] string trashString = "Ugh it smells awful...";
+    [SerializeField] string myCarString = "She's an old piece of shit but reliable";
     [SerializeField] string davidCarString = "David's new wheels. He can't stop bragging about it";
     [SerializeField] string needsZippoAndLighterFluidString = "I'm gonna need lighter fluid and a lighter";
     [SerializeField] string needsZippoString = "I still need a source of fire...";
-    [SerializeField] string needsLighterFluidString = "I still need lighter fluid...";    
+    [SerializeField] string needsLighterFluidString = "I still need lighter fluid...";
     
     void Awake() {
         gameController = GameObject.FindGameObjectWithTag("GameController").GetComponent<GameController>(); 
@@ -51,17 +46,19 @@ public class FirstPersonHighlights : MonoBehaviour
             case "MissingPoster":
                 fpController.DisablePlayerMovement(true, false);
                 interactables.ToggleMissingUI(hitObj.gameObject.name, true);
+                ClearHighlighted();
                 break;
             case "Newspaper":
                 fpController.DisablePlayerMovement(true, false);
                 interactables.ToggleMissingUI(hitObj.gameObject.name, true);
+                ClearHighlighted();
                 break;
             case "Drinks":
                 interactables.ToggleDrinksUI(true);
                 fpController.DisablePlayerMovement(true, true);
                 break;
-            case "Pickup":
-                //pickupObjects.HandlePickUpObject(hitObj);
+            case "Pick Up":
+                pickupObjects.HandlePickUpObject(hitObj);
                 break;
             case "Trash":
                 StartCoroutine(gameController.DisplayPopupMessage(trashString));
@@ -75,7 +72,7 @@ public class FirstPersonHighlights : MonoBehaviour
                         gameController.ToggleLeaveEarlyUI(true); // If player can leave (ending 1), open UI option
                         break;
                     case 7:
-                        StartCoroutine(gameController.DisplayPopupMessage(tiresSlashedString)); // Player tries to leave at night (tires slashed)
+                        // Player tries to leave at night (tires slashed)
                         break;
                     case 12:
                         StartCoroutine(gameController.HandleEndGame(2)); // Player leaves alone (ending 2)
@@ -92,8 +89,9 @@ public class FirstPersonHighlights : MonoBehaviour
                 StartCoroutine(gameController.DisplayPopupMessage(davidCarString));
                 break;
             case "Arcade Game":
-                StartCoroutine(interactables.ToggleArcade(true));
-                interactables.playingArcadeGame = true;
+                arcadeController.playingArcadeGame = true;
+                StartCoroutine(arcadeController.HandleEnableArcade(true));
+                interactText.text = "";
                 fpController.DisablePlayerMovement(true, false);
                 break;
             case "Firewood":
@@ -202,7 +200,6 @@ public class FirstPersonHighlights : MonoBehaviour
             //lastHighlightedObject.GetComponent<MeshRenderer>().material = originalMat;
             lastHighlightedObject = null;
             cursorImage.enabled = true;
-            cursorImage.sprite = normalCursor;
             interactText.enabled = false;
         }
     }
@@ -220,11 +217,7 @@ public class FirstPersonHighlights : MonoBehaviour
                 if(hitObj.tag == "Untagged" || hitObj.tag == "Player" || hitObj.tag == "Tile") {
                     cursorImage.enabled = false;
                     interactText.text = "";
-                } else if(hitObj.tag == "Pickup") {
-                    cursorImage.enabled = true;
-                    cursorImage.sprite = handCursor;
-                }
-                else {
+                } else {
                     cursorImage.enabled = false;
                     interactText.text = hitObj.tag;
                 }

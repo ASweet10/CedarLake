@@ -34,12 +34,13 @@ public class FirstPersonHealth : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.Alpha4)) {
             HandleTakeDamage();
         }
+        Debug.Log(currentHealth);
     }
     
         public void HandleTakeDamage() {
         if(canTakeDamage) {
             canTakeDamage = false;
-            currentHealth -= 1.5f;
+            currentHealth -= 1.3f;
             damageAudio.Play();
 
             UpdatePostProcessingEffects();
@@ -61,7 +62,7 @@ public class FirstPersonHealth : MonoBehaviour
         canTakeDamage = true;
 
         while(currentHealth < maxHealth && currentHealth > 0f) {
-            currentHealth += 0.08f * Time.deltaTime;
+            currentHealth += 0.1f * Time.deltaTime;
 
             if(currentHealth >= maxHealth) {
                 currentHealth = maxHealth;
@@ -81,9 +82,9 @@ public class FirstPersonHealth : MonoBehaviour
         vignette.intensity.value = Mathf.Lerp(0f, maxVignetteIntensity, effectStrength);
         colorAdjustments.saturation.value = Mathf.Lerp(0f, maxSaturation, effectStrength);
 
-        Color newColor = bloodUI.color;
-        newColor.a = Mathf.Lerp(0f, 1f, effectStrength);
-        bloodUI.color = newColor;
+        Color newColorOne = bloodUI.color;
+        newColorOne.a = Mathf.Lerp(0f, 1f, effectStrength);
+        bloodUI.color = newColorOne;
     }
 
     void HandleLowHealthEffects() {
@@ -96,8 +97,7 @@ public class FirstPersonHealth : MonoBehaviour
             if (!bloodUI.enabled) {
                 bloodUI.enabled = true;
             }
-        }
-        else {
+        } else {
             if (heartbeatAudio.isPlaying) {
                 StartCoroutine(FadeHeartbeatOut());
             }

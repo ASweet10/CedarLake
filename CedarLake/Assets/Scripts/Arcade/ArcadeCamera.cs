@@ -1,7 +1,6 @@
 using UnityEngine;
 
-public class ArcadeCamera : MonoBehaviour
-{
+public class ArcadeCamera : MonoBehaviour {
     Vector3 offset = new Vector3(0f, 0f, -3f);
     float smoothTime = 0.25f;
     Vector3 velocity = Vector3.zero;

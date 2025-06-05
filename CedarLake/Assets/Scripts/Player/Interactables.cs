@@ -9,7 +9,6 @@ public class Interactables : MonoBehaviour
     //KeyCode escape = KeyCode.Escape; // For build
     KeyCode twoKey = KeyCode.Alpha2; // for testing
 
-
     GameController gameController;
     [SerializeField] GameObject dialogueUI;
     DialogueManager dialogueManager;
@@ -17,6 +16,7 @@ public class Interactables : MonoBehaviour
     FirstPersonHighlights fpHighlights;
     GameObject player;
     SceneController sceneController;
+    [SerializeField] ArcadeController arcadeController;
 
     [Header("UI Objects")]
     [SerializeField] GameObject missingUI_Matthew;
@@ -60,27 +60,8 @@ public class Interactables : MonoBehaviour
     [SerializeField] GameObject inventoryMenuKeychain;
     [SerializeField] GameObject inventoryMenuDrink;
 
-
-    [Header("Arcade")]
-    [SerializeField] GameObject arcadeStartScreen;
-    [SerializeField] GameObject arcadeLevelOne;
-    [SerializeField] GameObject arcadeDeathUI;
-    [SerializeField] Camera arcadeStartCamera;
-    [SerializeField] Camera arcadePlayerCamera;
-    [SerializeField] Camera gameCamera;
-    [SerializeField] ArcadeController arcadeController;
-    [SerializeField] ArcadeWolf arcadeWolfScript;
-    [SerializeField] FirstPersonController firstPersonController;
-    [SerializeField] MouseLook mouseLook;
-    [SerializeField] AudioSource arcadeCoinSound;
-    [SerializeField] AudioClip arcadeMusic;
-    [SerializeField] AudioClip arcadeCoinSFX;
-    [SerializeField] TMP_Text escapeToExitText;
-    public bool playingArcadeGame;
-
     void Start () {
         playerInGasStation = false;
-        playingArcadeGame = false;
         gameController = gameObject.GetComponent<GameController>();
         sceneController = GameObject.FindGameObjectWithTag("SceneController").GetComponent<SceneController>();
         player = GameObject.FindGameObjectWithTag("Player");
@@ -120,12 +101,12 @@ public class Interactables : MonoBehaviour
         drinkUI.SetActive(choice);
         UICamera.SetActive(choice);
         drinkLight.SetActive(choice);
-        drinkOptions[0].SetActive(choice);
-        if(choice) {
+        if (choice) {
             drinkTitle.text = drinkOptions[drinkIndex].name;
             drinkDescription.text = drinkDescriptions[drinkIndex];
+            drinkOptions[drinkIndex].SetActive(choice);
         } else {
-            foreach(GameObject drink in drinkOptions) {
+            foreach (GameObject drink in drinkOptions) {
                 drink.SetActive(false);
             }
         }
@@ -247,9 +228,9 @@ public class Interactables : MonoBehaviour
                 return;
             } else if(dialogueUI.activeInHierarchy) {
                 dialogueManager.DialogueStop();
-            } else if(playingArcadeGame) {
-                StartCoroutine(ToggleArcade(false));
-                playingArcadeGame = false;
+            } else if(arcadeController.playingArcadeGame) {
+                arcadeController.HandleEnableArcade(false);
+                arcadeController.playingArcadeGame = false;
             } else {
                 if(gameController.gamePaused) {
                     gameController.ResumeGame();
@@ -283,49 +264,5 @@ public class Interactables : MonoBehaviour
         drinkTitle.text = drinkOptions[drinkIndex].name;
         drinkDescription.text = drinkDescriptions[drinkIndex];
     }
-    
-    public IEnumerator ToggleArcade(bool playingGame) {
-        if(playingGame) {
-            arcadeStartCamera.enabled = true;
-            gameCamera.enabled = false;
-            arcadeController.enabled = true;
-            
-            fpController.DisablePlayerMovement(true, false);
-            interactText.text = "";
 
-            arcadeCoinSound.Play();
-            yield return new WaitForSeconds(1.5f);
-            arcadeStartScreen.SetActive(false);
-            arcadeLevelOne.SetActive(true);
-            arcadePlayerCamera.enabled = true;
-            arcadeStartCamera.enabled = false;
-
-            arcadeController.ResetArcadePlayerPosition();
-            arcadeWolfScript.ResetWolfPosition();
-
-            arcadeController.CanMove = true;
-            arcadeCoinSound.clip = arcadeMusic;
-            arcadeCoinSound.Play();
-            arcadeCoinSound.loop = true;
-
-        } else {
-            gameCamera.enabled = true;
-            arcadeStartCamera.enabled = false;
-            arcadePlayerCamera.enabled = false;
-            arcadeController.enabled = false;
-
-            fpController.DisablePlayerMovement(false, false);
-            arcadeCoinSound.Stop();
-            arcadeCoinSound.clip = arcadeCoinSFX; // reset for next game
-
-            if(arcadeLevelOne.activeInHierarchy) {
-                arcadeLevelOne.SetActive(false);
-            }
-            if(arcadeDeathUI.activeInHierarchy) {
-                arcadeDeathUI.SetActive(false);
-            }
-            arcadeStartScreen.SetActive(true);
-            escapeToExitText.enabled = false;
-        }
-    }
 }

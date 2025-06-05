@@ -1,27 +1,35 @@
 using System.Collections;
-using System.Collections.Generic;
-using System.Runtime.Remoting.Messaging;
+using TMPro;
 using UnityEngine;
 
-public class ArcadeController : MonoBehaviour
-{
+public class ArcadeController : MonoBehaviour {
     [SerializeField] GameObject arcadeWolfObject;
-    ArcadeWolf arcadeWolfController;
+    [SerializeField] ArcadeCamera arcadeCamera;
     [SerializeField] GameObject startScreen;
     [SerializeField] GameObject deathScreen;
     [SerializeField] GameObject winGameScreen;
     [SerializeField] GameObject arcadeLevelOne;
+    [SerializeField] GameObject arcadeLevelTwo;
+    [SerializeField] GameObject arcadeLevelScreen;
     [SerializeField] GameObject arcadeBloodScreen;
     [SerializeField] GameObject arcadeBackground;
-    [SerializeField] SpriteRenderer spriteRenderer;
-    [SerializeField] Rigidbody2D playerRB;
-    [SerializeField] Animator anim;
+    [SerializeField] GameObject arcadePlayerObject;
+    [SerializeField] SpriteRenderer arcadeSpriteRenderer;
+    [SerializeField] Rigidbody2D arcadeRB;
+    [SerializeField] Animator arcadeAnim;
     [SerializeField] AudioSource wolfSnarlAudio;
     [SerializeField] Transform arcadePlayerTF;
+    [SerializeField] Transform wolfTF;
     [SerializeField] Transform playerStartPosition;
+    [SerializeField] Transform wolfStartPosition;
     [SerializeField] Light arcadeLight;
-    [SerializeField] Camera startCamera;
-    [SerializeField] Camera playerCamera;
+    [SerializeField] Camera arcadeStartCam;
+    [SerializeField] Camera arcadePlayerCam;
+
+    [SerializeField] FirstPersonController fpController;
+    [SerializeField] Camera mainGameCamera;
+    [SerializeField] AudioSource arcadeCoinSound;
+    [SerializeField] AudioClip arcadeCoinSFX;
 
     float moveSpeed = 1.6f;
     int playerLives;
@@ -32,102 +40,170 @@ public class ArcadeController : MonoBehaviour
         set { canMove = value; }
     }
     bool facingRight;
+    public bool playingArcadeGame;
+
 
     void Start() {
+        playingArcadeGame = false;
         wolfSnarlAudio = gameObject.GetComponent<AudioSource>();
-        arcadeWolfController = arcadeWolfObject.GetComponent<ArcadeWolf>();
 
         playerLives = maxLives;
-        canMove = true;
+        canMove = false;
         facingRight = true;
     }
     void Update() {
-        /*
-        if(Time.time - startTime > 6f) {
-            if(!wolfSpawned) {
-                arcadeWolfObject.SetActive(true);
-                wolfSpawned = true;
-            }
-        }
-        */
-        
-        arcadeWolfObject.SetActive(true);
-        MovePlayerOnInput();
+        HandleArcadeMovement();
     }
-    void MovePlayerOnInput() {
-        if(canMove) {
-            if(Input.GetKey(KeyCode.W) || Input.GetKey(KeyCode.UpArrow)) {
-                playerRB.MovePosition(playerRB.position + new Vector2(0, 1) * moveSpeed * Time.deltaTime);
-                anim.SetBool("isWalking", true);
-            } else if(Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.LeftArrow)) {
-                playerRB.MovePosition(playerRB.position + new Vector2(-1, 0) * moveSpeed * Time.deltaTime);
-                anim.SetBool("isWalking", true);
-                if(facingRight) {
-                    spriteRenderer.flipX = true;
+    void HandleArcadeMovement() {
+        if (canMove) {
+            if (Input.GetKey(KeyCode.W) || Input.GetKey(KeyCode.UpArrow)) {
+                arcadeRB.MovePosition(arcadeRB.position + new Vector2(0, 1) * moveSpeed * Time.deltaTime);
+                arcadeAnim.SetBool("isWalking", true);
+            } else if (Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.LeftArrow)) {
+                arcadeRB.MovePosition(arcadeRB.position + new Vector2(-1, 0) * moveSpeed * Time.deltaTime);
+                arcadeAnim.SetBool("isWalking", true);
+                if (facingRight) {
+                    arcadeSpriteRenderer.flipX = true;
                     facingRight = false;
                 }
-            } else if(Input.GetKey(KeyCode.S) || Input.GetKey(KeyCode.DownArrow)) {
-                playerRB.MovePosition(playerRB.position + new Vector2(0, -1) * moveSpeed * Time.deltaTime);
-                anim.SetBool("isWalking", true);
-            } else if(Input.GetKey(KeyCode.D) || Input.GetKey(KeyCode.RightArrow)) {
-                playerRB.MovePosition(playerRB.position + new Vector2(1, 0) * moveSpeed * Time.deltaTime);
-                anim.SetBool("isWalking", true);
-                if(!facingRight) {
-                    spriteRenderer.flipX = false;
+            } else if (Input.GetKey(KeyCode.S) || Input.GetKey(KeyCode.DownArrow)) {
+                arcadeRB.MovePosition(arcadeRB.position + new Vector2(0, -1) * moveSpeed * Time.deltaTime);
+                arcadeAnim.SetBool("isWalking", true);
+            } else if (Input.GetKey(KeyCode.D) || Input.GetKey(KeyCode.RightArrow)) {
+                arcadeRB.MovePosition(arcadeRB.position + new Vector2(1, 0) * moveSpeed * Time.deltaTime);
+                arcadeAnim.SetBool("isWalking", true);
+                if (!facingRight) {
+                    arcadeSpriteRenderer.flipX = false;
                     facingRight = true;
                 }
             } else { // No movement input
-                anim.SetBool("isWalking", false);
+                arcadeAnim.SetBool("isWalking", false);
             }
         }
     }
 
-    public void HandleLoseArcadeLife() {
-        playerLives --;
-        if(playerLives <= 0) {
-            StartCoroutine(HandleArcadeGameOver());
-        }
+    public void HandleArcadeGameOver() {
+        StartCoroutine(EnableGameOver());
     }
 
-    public IEnumerator HandleArcadeGameOver() {
+    public IEnumerator EnableGameOver() {
         canMove = false;
-        anim.SetBool("isWalking", false);
-        arcadeLevelOne.SetActive(false);
         wolfSnarlAudio.Play();
-        playerCamera.enabled = false;
-        startCamera.enabled = true;
+
+        arcadeLevelOne.SetActive(false);
+        arcadePlayerObject.SetActive(false);
+        arcadeWolfObject.SetActive(false);
+        arcadePlayerCam.enabled = false;
+        arcadeStartCam.enabled = true;
         arcadeBackground.SetActive(false);
         arcadeBloodScreen.SetActive(true);
         arcadeLight.enabled = false;
-        
-        yield return new WaitForSeconds(1.5f);
+
+        yield return new WaitForSeconds(1f);
         arcadeBloodScreen.SetActive(false);
         arcadeBackground.SetActive(true);
         arcadeLight.enabled = true;
         deathScreen.SetActive(true);
 
-        yield return new WaitForSeconds(3.5f);
+        yield return new WaitForSeconds(3f);
         deathScreen.SetActive(false);
         startScreen.SetActive(true);
-        
+
+        StartCoroutine(HandleEnableArcade(false));
     }
 
-    public void HandleWinGame() {
+    public void HandleLevelTransition(int level) {
+        if (level == 1) {
+            StartCoroutine(EnableSceneTwo());
+        } else {
+            StartCoroutine(HandleWinGame());
+        }
+    }
+
+    public IEnumerator EnableSceneTwo() {
         canMove = false;
-        anim.SetBool("isWalking", false);
         arcadeLevelOne.SetActive(false);
-        winGameScreen.SetActive(true);
-    }
+        arcadePlayerCam.enabled = false;
+        arcadeStartCam.enabled = true;
+        arcadeLevelScreen.SetActive(true);
+        arcadeLevelScreen.GetComponentInChildren<TextMeshPro>().text = "II";
 
-    public void ResetArcadePlayerPosition() {
-        arcadePlayerTF.position = playerStartPosition.position;
-    }
-
-    public IEnumerator DisableMovementAndTransitionScreen() {
-        canMove = false;
-        arcadeWolfController.SetCanMove(false);
         yield return new WaitForSeconds(2f);
+        arcadeLevelScreen.SetActive(false);
+        arcadeLevelTwo.SetActive(true);
+        arcadeStartCam.enabled = false;
+        arcadePlayerCam.enabled = true;
+
+        ResetCharacterPositions();
         canMove = true;
-        arcadeWolfController.SetCanMove(true);
+    }
+
+    public IEnumerator HandleWinGame() {
+        canMove = false;
+
+        arcadeLevelTwo.SetActive(false);
+        arcadePlayerObject.SetActive(false);
+        arcadeWolfObject.SetActive(false);
+        arcadePlayerCam.enabled = false;
+        arcadeStartCam.enabled = true;
+        winGameScreen.SetActive(true);
+
+        yield return new WaitForSeconds(2.5f);
+        winGameScreen.SetActive(false);
+        startScreen.SetActive(true);
+
+        StartCoroutine(HandleEnableArcade(false));
+    }
+
+    public void ResetCharacterPositions() {
+        arcadePlayerObject.SetActive(true);
+        arcadeWolfObject.SetActive(true);
+        facingRight = true;
+        arcadeSpriteRenderer.flipX = false;
+        arcadePlayerTF.position = playerStartPosition.position;
+        wolfTF.position = wolfStartPosition.position;
+        CanMove = true;
+    }
+
+    public IEnumerator HandleEnableArcade(bool enabled) {
+        if (enabled) {
+            arcadeStartCam.enabled = true;
+            mainGameCamera.enabled = false;
+            fpController.DisablePlayerMovement(true, false);
+
+            arcadeCoinSound.Play();
+
+            yield return new WaitForSeconds(1f);
+            startScreen.SetActive(false);
+            arcadeLevelScreen.SetActive(true);
+            arcadeLevelScreen.GetComponentInChildren<TextMeshPro>().text = "I";
+
+            yield return new WaitForSeconds(2f);
+            arcadeLevelScreen.SetActive(false);
+            arcadeLevelOne.SetActive(true);
+            arcadePlayerCam.enabled = true;
+            arcadeStartCam.enabled = false;
+
+            ResetCharacterPositions();
+
+            canMove = true;
+        } else {
+            canMove = false;
+            mainGameCamera.enabled = true;
+            arcadeStartCam.enabled = false;
+            arcadePlayerCam.enabled = false;
+
+            fpController.DisablePlayerMovement(false, false);
+            arcadeCoinSound.Stop();
+            arcadeCoinSound.clip = arcadeCoinSFX; // reset for next game
+
+            arcadeLevelOne.SetActive(false);
+            arcadeLevelTwo.SetActive(false);
+
+            if (deathScreen.activeInHierarchy) {
+                deathScreen.SetActive(false);
+            }
+            startScreen.SetActive(true);
+        }
     }
 }

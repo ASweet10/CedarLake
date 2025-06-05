@@ -49,7 +49,7 @@ public class KillerAI : MonoBehaviour
     }
 
     void Update() {
-        Debug.DrawLine(Vector3.zero, new Vector3(0, 5, 0), Color.cyan, 30f, false);
+        //Debug.DrawLine(Vector3.zero, new Vector3(0, 5, 0), Color.cyan, 30f, false);
         
         if (fovScript.canSeePlayer) {
             if (Time.time - lastUpdateTime >= 1.5f) {
@@ -86,7 +86,7 @@ public class KillerAI : MonoBehaviour
             default:
                 break;
         }
-        Debug.Log("killer state: " + state);
+        //Debug.Log("killer state: " + state);
     }
 
     void HandleIdle() {
@@ -119,7 +119,7 @@ public class KillerAI : MonoBehaviour
 
         if (Vector3.Distance(tf.position, waypoints[currentWaypoint].position) > 2f)
         {
-            Debug.Log(Vector3.Distance(tf.position, waypoints[currentWaypoint].position));
+            //Debug.Log(Vector3.Distance(tf.position, waypoints[currentWaypoint].position));
             anim.SetBool("walking", true);
 
             agent.speed = walkSpeed;
@@ -160,7 +160,7 @@ public class KillerAI : MonoBehaviour
             if (Time.time - lastUpdateTime >= 1.5f) {
                 playerLastSeenPosition = playerTF.position;
                 lastUpdateTime = Time.time;
-                Debug.Log(playerLastSeenPosition);
+                //Debug.Log(playerLastSeenPosition);
             }
             agent.speed = sprintSpeed;
             agent.SetDestination(playerTF.position);
@@ -244,7 +244,7 @@ public class KillerAI : MonoBehaviour
         }
         
         if (Vector3.Distance(tf.position, playerLastSeenPosition) > 3f) {
-            Debug.Log("distance: " + Vector3.Distance(tf.position, playerLastSeenPosition));
+            //Debug.Log("distance: " + Vector3.Distance(tf.position, playerLastSeenPosition));
             agent.SetDestination(playerLastSeenPosition);
         }
         else {

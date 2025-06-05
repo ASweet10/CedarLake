@@ -190,6 +190,7 @@ public class DialogueManager : MonoBehaviour
         firstPersonController.DisablePlayerMovement(false, false);
         
         var aiRef = GameObject.FindGameObjectWithTag(gameController.currentSpeaker).GetComponent<CharacterAI>();
+        Debug.Log(aiRef.gameObject.name);
         aiRef.StateRef = aiRef.lastState;
     }
     IEnumerator HandleZoomIn(bool shouldZoomIn) {

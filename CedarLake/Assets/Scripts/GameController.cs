@@ -16,6 +16,7 @@ public class GameController : MonoBehaviour
     [SerializeField] SceneController sceneController;
     [SerializeField] FirstPersonController fpController;
     [SerializeField] KillerAI killerAI;
+    CutsceneManager cutsceneManager;
 
 
     [Header("Objectives")]
@@ -111,6 +112,7 @@ public class GameController : MonoBehaviour
 
     
     void Start() {
+        cutsceneManager = gameObject.GetComponent<CutsceneManager>();
         fpHighlights = GameObject.FindGameObjectWithTag("Player").GetComponent<FirstPersonHighlights>();
         volume = gameObject.GetComponent<Volume>();
         volume.profile.TryGet(out colorAdjustments);
@@ -254,23 +256,21 @@ public class GameController : MonoBehaviour
     }
 
     public IEnumerator TransitionToNighttime() {
-        sceneController.FadeOut(3, 99);
-        yield return new WaitForSeconds(2.5f);
-        threeAMUI.SetActive(true);
-        //display 3:02 am time
-
+        cutsceneManager.ToggleCutscene("Campfire", true);
+        fpController.DisablePlayerMovement(true, false);
         tentObjects[0].SetActive(false); // disable tent flap (David)
         axeInStump.SetActive(false);
 
+        yield return new WaitForSeconds(8f);
+        cutsceneManager.ToggleCutscene("Campfire", false);
+
+        fpController.DisablePlayerMovement(false, false);
         RenderSettings.skybox = nightSkyboxMat;
         directionalLightDay.SetActive(false);
         directionalLightNight.SetActive(true);
         colorAdjustments.hueShift.value = 2f;
         
         yield return new WaitForSeconds(2f);
-        sceneController.FadeIn(3);
-        //player can look around but not move, can interact with tent flap
-        playerTent.tag = "Leave Tent";
     }
     public void HandleLeaveTent() {
         // fade out 1-2 sec, play zip sfx, fade in 1-2 sec
